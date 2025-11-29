@@ -1,2 +1,6 @@
-package altay.boots.altayboots.model.role;public enum Authorities {
+package altay.boots.altayboots.model.role;
+
+public enum Authorities {
+    USER,
+    ADMIN
 }
