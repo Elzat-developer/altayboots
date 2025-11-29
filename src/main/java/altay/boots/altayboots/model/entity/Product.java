@@ -18,4 +18,7 @@ public class Product {
     private int oldPrice;
     @Column(name = "photo_url")
     private String photoURL;
+    @ManyToOne
+    @JoinColumn(name = "catalogs_id",referencedColumnName = "id")
+    private Catalog catalog;
 }

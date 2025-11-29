@@ -1,4 +1,4 @@
-package altay.boots.altayboots.dto.auth.admin;
+package altay.boots.altayboots.dto.admin;
 
 public record CreateProduct(
          String name,
@@ -6,6 +6,7 @@ public record CreateProduct(
          String text,
          int price,
          int oldPrice,
-         String photoURL
+         String photoURL,
+         int catalog_id
 ) {
 }

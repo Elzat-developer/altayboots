@@ -15,5 +15,10 @@ CREATE TABLE IF NOT EXISTS products (
                                         text varchar(255) DEFAULT NULL,
                                         price int DEFAULT NULL,
                                         old_price int DEFAULT NULL,
-                                        photo_url varchar(255) DEFAULT NULL
+                                        photo_url varchar(255) DEFAULT NULL,
+                                        catalogs_id int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS catalogs (
+                                        id int auto_increment primary key,
+                                        name varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

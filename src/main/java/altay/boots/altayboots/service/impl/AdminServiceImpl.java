@@ -1,7 +1,10 @@
 package altay.boots.altayboots.service.impl;
 
-import altay.boots.altayboots.dto.auth.admin.CreateProduct;
+import altay.boots.altayboots.dto.admin.CreateCatalog;
+import altay.boots.altayboots.dto.admin.CreateProduct;
+import altay.boots.altayboots.model.entity.Catalog;
 import altay.boots.altayboots.model.entity.Product;
+import altay.boots.altayboots.repository.CatalogRepo;
 import altay.boots.altayboots.repository.ProductRepo;
 import altay.boots.altayboots.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
     private final ProductRepo productRepo;
+    private final CatalogRepo catalogRepo;
     @Override
     public void createProduct(CreateProduct createProduct) {
         Product product = new Product();
@@ -22,6 +26,10 @@ public class AdminServiceImpl implements AdminService {
         product.setPrice(createProduct.price());
         product.setOldPrice(createProduct.oldPrice());
         product.setPhotoURL(createProduct.photoURL());
+
+        Catalog catalog = catalogRepo.findById(createProduct.catalog_id());
+        product.setCatalog(catalog);
+
         productRepo.save(product);
     }
 
@@ -42,7 +50,8 @@ public class AdminServiceImpl implements AdminService {
                 product.getText(),
                 product.getPrice(),
                 product.getOldPrice(),
-                product.getPhotoURL()
+                product.getPhotoURL(),
+                product.getCatalog().getId()
         );
     }
 
@@ -63,6 +72,56 @@ public class AdminServiceImpl implements AdminService {
         productRepo.deleteById(productId);
     }
 
+    @Override
+    public void createCatalog(CreateCatalog createCatalog) {
+        Catalog catalog = new Catalog();
+        catalog.setName(catalog.getName());
+        catalogRepo.save(catalog);
+    }
+
+    @Override
+    public List<CreateCatalog> getCatalogs() {
+        List<Catalog> catalogs = catalogRepo.findAll();
+        return catalogs.stream()
+                .map(this::toDtoCatalog)
+                .toList();
+    }
+
+    @Override
+    public void editCatalog(int catalogId, CreateCatalog catalog) {
+        Catalog catalogRepoById = catalogRepo.findById(catalogId);
+        catalogRepoById.setName(catalog.name());
+        catalogRepo.save(catalogRepoById);
+    }
+
+    @Override
+    public List<CreateProduct> getProductsCatalog(int catalogId) {
+        Catalog catalog = catalogRepo.findById(catalogId);
+
+        if (catalog == null) {
+            throw new RuntimeException("Catalog not found");
+        }
+
+        // Получаем список продуктов
+        List<Product> products = catalog.getProducts();
+
+        return products.stream()
+                .map(this::toDtoProduct)
+                .toList();
+    }
+
+    @Override
+    public void deleteCatalog(Integer catalogId) {
+        catalogRepo.deleteById(catalogId);
+    }
+
+
+    private CreateCatalog toDtoCatalog(Catalog catalog) {
+        return new CreateCatalog(
+                catalog.getName()
+        );
+    }
+
     private CreateProduct toDtoProduct(Product product) {
         return new CreateProduct(
                 product.getName(),
@@ -70,7 +129,8 @@ public class AdminServiceImpl implements AdminService {
                 product.getText(),
                 product.getPrice(),
                 product.getOldPrice(),
-                product.getPhotoURL()
+                product.getPhotoURL(),
+                product.getCatalog().getId()
         );
     }
 }

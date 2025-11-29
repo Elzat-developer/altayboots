@@ -1,6 +1,7 @@
 package altay.boots.altayboots.service;
 
-import altay.boots.altayboots.dto.auth.admin.CreateProduct;
+import altay.boots.altayboots.dto.admin.CreateCatalog;
+import altay.boots.altayboots.dto.admin.CreateProduct;
 
 import java.util.List;
 
@@ -14,4 +15,14 @@ public interface AdminService {
     void editProduct(int product_id,CreateProduct createProduct);
 
     void deleteProduct(Integer productId);
+
+    void createCatalog(CreateCatalog createCatalog);
+
+    List<CreateCatalog> getCatalogs();
+
+    void editCatalog(int catalogId, CreateCatalog catalog);
+
+    List<CreateProduct> getProductsCatalog(int catalogId);
+
+    void deleteCatalog(Integer catalogId);
 }
