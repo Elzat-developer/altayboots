@@ -4,6 +4,7 @@ import altay.boots.altayboots.dto.admin.*;
 import altay.boots.altayboots.model.entity.Catalog;
 import altay.boots.altayboots.model.entity.Company;
 import altay.boots.altayboots.model.entity.Product;
+import altay.boots.altayboots.model.entity.ProductPhoto;
 import altay.boots.altayboots.repository.CatalogRepo;
 import altay.boots.altayboots.repository.CompanyRepo;
 import altay.boots.altayboots.repository.ProductRepo;
@@ -44,26 +45,37 @@ public class AdminServiceImpl implements AdminService {
         product.setPrice(createProduct.price());
         product.setOldPrice(createProduct.oldPrice());
 
-        Path uploadDir = Paths.get("C:/uploads/products");
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            log.error("❌ Не удалось создать папку загрузки: {}", e.getMessage(), e);
-            throw new RuntimeException("Не удалось создать папку загрузки", e);
-        }
-
-        // 📷 Фото
-        if (createProduct.photoURL() != null && !createProduct.photoURL().isEmpty()) {
-            String photoPath = processPhoto(createProduct.photoURL(), uploadDir);
-            product.setPhotoURL(photoPath);
-            log.info("✅ Фото успешно сохранено: {}", photoPath);
-        }
-
         Catalog catalog = catalogRepo.findById(createProduct.catalog_id());
         product.setCatalog(catalog);
 
         productRepo.save(product);
+
+        Path uploadDir = Paths.get("C:/uploads/products");
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            throw new RuntimeException("Не удалось создать папку загрузки", e);
+        }
+
+        // 📷 СОХРАНЕНИЕ НЕСКОЛЬКИХ ФОТО
+        if (createProduct.photos() != null) {
+            for (MultipartFile file : createProduct.photos()) {
+
+                if (!file.isEmpty()) {
+                    String photoPath = processPhoto(file, uploadDir);
+
+                    ProductPhoto photo = new ProductPhoto();
+                    photo.setPhotoURL(photoPath);
+                    photo.setProduct(product);
+
+                    product.getPhotos().add(photo);
+                }
+            }
+        }
+
+        productRepo.save(product);
     }
+
 
     @Override
     public List<GetProduct> getProducts() {
@@ -76,20 +88,28 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public GetProduct getProduct(int productId) {
         Product product = productRepo.findById(productId);
+
+        List<String> photoList = product.getPhotos()
+                .stream()
+                .map(ProductPhoto::getPhotoURL)
+                .toList();
+
         return new GetProduct(
                 product.getName(),
                 product.getDescription(),
                 product.getText(),
                 product.getPrice(),
                 product.getOldPrice(),
-                product.getPhotoURL(),
+                photoList,
                 product.getCatalog().getId()
         );
     }
 
+
     @Override
-    public void editProduct(int product_id,CreateProduct createProduct) {
+    public void editProduct(int product_id, CreateProduct createProduct) {
         Product product = productRepo.findById(product_id);
+
         product.setName(createProduct.name());
         product.setDescription(createProduct.description());
         product.setText(createProduct.text());
@@ -100,18 +120,29 @@ public class AdminServiceImpl implements AdminService {
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
-            log.error("❌ Не удалось создать папку загрузки: {}", e.getMessage(), e);
             throw new RuntimeException("Не удалось создать папку загрузки", e);
         }
 
-        // 📷 Фото
-        if (createProduct.photoURL() != null && !createProduct.photoURL().isEmpty()) {
-            String photoPath = processPhoto(createProduct.photoURL(), uploadDir);
-            product.setPhotoURL(photoPath);
-            log.info("✅ Фото успешно сохранено: {}", photoPath);
+        // 📌 ЕСЛИ ПРИШЛИ НОВЫЕ ФОТО — УДАЛЯЕМ СТАРЫЕ
+        if (createProduct.photos() != null && !createProduct.photos().isEmpty()) {
+            product.getPhotos().clear();
+
+            for (MultipartFile file : createProduct.photos()) {
+                if (!file.isEmpty()) {
+                    String photoPath = processPhoto(file, uploadDir);
+
+                    ProductPhoto photo = new ProductPhoto();
+                    photo.setPhotoURL(photoPath);
+                    photo.setProduct(product);
+
+                    product.getPhotos().add(photo);
+                }
+            }
         }
+
         productRepo.save(product);
     }
+
 
     @Override
     public void deleteProduct(Integer productId) {
@@ -288,7 +319,10 @@ public class AdminServiceImpl implements AdminService {
                 product.getText(),
                 product.getPrice(),
                 product.getOldPrice(),
-                product.getPhotoURL(),
+                product.getPhotos()
+                        .stream()
+                        .map(ProductPhoto::getPhotoURL)
+                        .toList(),
                 product.getCatalog().getId()
         );
     }
