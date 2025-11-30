@@ -1,8 +1,6 @@
 package altay.boots.altayboots.controller;
 
-import altay.boots.altayboots.dto.admin.CreateCatalog;
-import altay.boots.altayboots.dto.admin.CreateCompanyDescription;
-import altay.boots.altayboots.dto.admin.CreateProduct;
+import altay.boots.altayboots.dto.admin.*;
 import altay.boots.altayboots.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,13 +15,13 @@ import java.util.List;
 public class AdminPanelController {
     private final AdminService adminService;
     @GetMapping("/products")
-    public ResponseEntity<List<CreateProduct>> getProducts(){
-        List<CreateProduct> productList = adminService.getProducts();
+    public ResponseEntity<List<GetProduct>> getProducts(){
+        List<GetProduct> productList = adminService.getProducts();
         return ResponseEntity.ok(productList);
     }
     @GetMapping("/product/{product_id}")
-    public ResponseEntity<CreateProduct> getProducts(@PathVariable Integer product_id){
-        CreateProduct product = adminService.getProduct(product_id);
+    public ResponseEntity<GetProduct> getProducts(@PathVariable Integer product_id){
+        GetProduct product = adminService.getProduct(product_id);
         return ResponseEntity.ok(product);
     }
     @GetMapping("/catalogs")
@@ -32,13 +30,13 @@ public class AdminPanelController {
         return ResponseEntity.ok(catalogList);
     }
     @GetMapping("/catalog/{catalog_id}")
-    public ResponseEntity<List<CreateProduct>> getCatalog(@PathVariable Integer catalog_id){
-        List<CreateProduct> products = adminService.getProductsCatalog(catalog_id);
+    public ResponseEntity<List<GetProduct>> getCatalog(@PathVariable Integer catalog_id){
+        List<GetProduct> products = adminService.getProductsCatalog(catalog_id);
         return ResponseEntity.ok(products);
     }
     @GetMapping("/company")
-    public ResponseEntity<CreateCompanyDescription> getCompany(){
-       CreateCompanyDescription companyDescription = adminService.getCompany();
+    public ResponseEntity<CompanyDescription> getCompany(){
+       CompanyDescription companyDescription = adminService.getCompany();
         return ResponseEntity.ok(companyDescription);
     }
     @PostMapping("/create-product")

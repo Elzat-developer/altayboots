@@ -1,8 +1,6 @@
 package altay.boots.altayboots.service.impl;
 
-import altay.boots.altayboots.dto.admin.CreateCatalog;
-import altay.boots.altayboots.dto.admin.CreateCompanyDescription;
-import altay.boots.altayboots.dto.admin.CreateProduct;
+import altay.boots.altayboots.dto.admin.*;
 import altay.boots.altayboots.model.entity.Catalog;
 import altay.boots.altayboots.model.entity.Company;
 import altay.boots.altayboots.model.entity.Product;
@@ -11,11 +9,27 @@ import altay.boots.altayboots.repository.CompanyRepo;
 import altay.boots.altayboots.repository.ProductRepo;
 import altay.boots.altayboots.service.AdminService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 @Service
+@Log4j2
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
     private final ProductRepo productRepo;
@@ -29,7 +43,21 @@ public class AdminServiceImpl implements AdminService {
         product.setText(createProduct.text());
         product.setPrice(createProduct.price());
         product.setOldPrice(createProduct.oldPrice());
-        product.setPhotoURL(createProduct.photoURL());
+
+        Path uploadDir = Paths.get("C:/uploads/products");
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            log.error("❌ Не удалось создать папку загрузки: {}", e.getMessage(), e);
+            throw new RuntimeException("Не удалось создать папку загрузки", e);
+        }
+
+        // 📷 Фото
+        if (createProduct.photoURL() != null && !createProduct.photoURL().isEmpty()) {
+            String photoPath = processPhoto(createProduct.photoURL(), uploadDir);
+            product.setPhotoURL(photoPath);
+            log.info("✅ Фото успешно сохранено: {}", photoPath);
+        }
 
         Catalog catalog = catalogRepo.findById(createProduct.catalog_id());
         product.setCatalog(catalog);
@@ -38,7 +66,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<CreateProduct> getProducts() {
+    public List<GetProduct> getProducts() {
         List<Product> products = productRepo.findAll();
         return products.stream()
                 .map(this::toDtoProduct)
@@ -46,9 +74,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public CreateProduct getProduct(int productId) {
+    public GetProduct getProduct(int productId) {
         Product product = productRepo.findById(productId);
-        return new CreateProduct(
+        return new GetProduct(
                 product.getName(),
                 product.getDescription(),
                 product.getText(),
@@ -67,7 +95,21 @@ public class AdminServiceImpl implements AdminService {
         product.setText(createProduct.text());
         product.setPrice(createProduct.price());
         product.setOldPrice(createProduct.oldPrice());
-        product.setPhotoURL(createProduct.photoURL());
+
+        Path uploadDir = Paths.get("C:/uploads/products");
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            log.error("❌ Не удалось создать папку загрузки: {}", e.getMessage(), e);
+            throw new RuntimeException("Не удалось создать папку загрузки", e);
+        }
+
+        // 📷 Фото
+        if (createProduct.photoURL() != null && !createProduct.photoURL().isEmpty()) {
+            String photoPath = processPhoto(createProduct.photoURL(), uploadDir);
+            product.setPhotoURL(photoPath);
+            log.info("✅ Фото успешно сохранено: {}", photoPath);
+        }
         productRepo.save(product);
     }
 
@@ -99,7 +141,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<CreateProduct> getProductsCatalog(int catalogId) {
+    public List<GetProduct> getProductsCatalog(int catalogId) {
         Catalog catalog = catalogRepo.findById(catalogId);
 
         if (catalog == null) {
@@ -124,16 +166,31 @@ public class AdminServiceImpl implements AdminService {
         Company company = new Company();
         company.setName(createCompanyDescription.name());
         company.setText(createCompanyDescription.text());
-        company.setPhotoURL(createCompanyDescription.photoURL());
+
+        Path uploadDir = Paths.get("C:/uploads/company");
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            log.error("❌ Не удалось создать папку загрузки: {}", e.getMessage(), e);
+            throw new RuntimeException("Не удалось создать папку загрузки", e);
+        }
+
+        // 📷 Фото
+        if (createCompanyDescription.photoURL() != null && !createCompanyDescription.photoURL().isEmpty()) {
+            String photoPath = processPhoto(createCompanyDescription.photoURL(), uploadDir);
+            company.setPhotoURL(photoPath);
+            log.info("✅ Фото успешно сохранено: {}", photoPath);
+        }
+
         company.setBase(createCompanyDescription.base());
         company.setCity(createCompanyDescription.city());
         companyRepo.save(company);
     }
 
     @Override
-    public CreateCompanyDescription getCompany() {
+    public CompanyDescription getCompany() {
         Company company = companyRepo.findById(1);
-        return new CreateCompanyDescription(
+        return new CompanyDescription(
                 company.getName(),
                 company.getText(),
                 company.getPhotoURL(),
@@ -148,11 +205,74 @@ public class AdminServiceImpl implements AdminService {
 
         company.setName(companyDescription.name());
         company.setText(companyDescription.text());
-        company.setPhotoURL(companyDescription.photoURL());
+
+
+        Path uploadDir = Paths.get("C:/uploads/company");
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            log.error("❌ Не удалось создать папку загрузки: {}", e.getMessage(), e);
+            throw new RuntimeException("Не удалось создать папку загрузки", e);
+        }
+
+        // 📷 Фото
+        if (companyDescription.photoURL() != null && !companyDescription.photoURL().isEmpty()) {
+            String photoPath = processPhoto(companyDescription.photoURL(), uploadDir);
+            company.setPhotoURL(photoPath);
+            log.info("✅ Фото успешно сохранено: {}", photoPath);
+        }
+
         company.setBase(companyDescription.base());
         company.setCity(companyDescription.city());
 
         companyRepo.save(company);
+    }
+    private String processPhoto(MultipartFile photo, Path uploadDir) {
+        validateFileSize(photo, 10);
+        String fileName = UUID.randomUUID() + "_" + photo.getOriginalFilename();
+        Path filePath = uploadDir.resolve(fileName);
+        try {
+            compressAndSaveImage(photo, filePath);
+            return filePath.toString();
+        } catch (IOException e) {
+            log.error("Ошибка при обработке фото '{}': {}", photo.getOriginalFilename(), e.getMessage(), e);
+            throw new RuntimeException("Ошибка при обработке фото", e);
+        }
+    }
+    private void validateFileSize(MultipartFile file, int maxSizeMb) {
+        long maxSizeBytes = maxSizeMb * 1024L * 1024L;
+        if (file.getSize() > maxSizeBytes) {
+            log.warn("Файл '{}' превышает допустимый размер {} МБ ({} байт)",
+                    file.getOriginalFilename(), maxSizeMb, file.getSize());
+            throw new IllegalArgumentException("Размер файла превышает " + maxSizeMb + " МБ");
+        }
+    }
+    private void compressAndSaveImage(MultipartFile imageFile, Path outputPath) throws IOException {
+        BufferedImage image = ImageIO.read(imageFile.getInputStream());
+        if (image == null) {
+            throw new IllegalArgumentException("Неверный формат изображения");
+        }
+
+        try (OutputStream os = Files.newOutputStream(outputPath);
+             ImageOutputStream ios = ImageIO.createImageOutputStream(os)) {
+
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+            if (!writers.hasNext()) throw new IllegalStateException("JPEG writer не найден");
+
+            ImageWriter writer = writers.next();
+            writer.setOutput(ios);
+
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            if (param.canWriteCompressed()) {
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(0.6f); // 60% качества
+            }
+
+            writer.write(null, new IIOImage(image, null, null), param);
+            writer.dispose();
+        }
+
+        log.info("📸 Фото успешно сжато и сохранено: {}", outputPath);
     }
 
     private CreateCatalog toDtoCatalog(Catalog catalog) {
@@ -161,8 +281,8 @@ public class AdminServiceImpl implements AdminService {
         );
     }
 
-    private CreateProduct toDtoProduct(Product product) {
-        return new CreateProduct(
+    private GetProduct toDtoProduct(Product product) {
+        return new GetProduct(
                 product.getName(),
                 product.getDescription(),
                 product.getText(),

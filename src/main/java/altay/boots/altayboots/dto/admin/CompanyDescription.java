@@ -1,12 +1,9 @@
 package altay.boots.altayboots.dto.admin;
 
-
-import org.springframework.web.multipart.MultipartFile;
-
-public record CreateCompanyDescription(
+public record CompanyDescription(
         String name,
         String text,
-        MultipartFile photoURL,
+        String photoURL,
         String base,
         String city
 ) {
