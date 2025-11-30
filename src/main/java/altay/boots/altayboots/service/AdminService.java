@@ -1,6 +1,7 @@
 package altay.boots.altayboots.service;
 
 import altay.boots.altayboots.dto.admin.CreateCatalog;
+import altay.boots.altayboots.dto.admin.CreateCompanyDescription;
 import altay.boots.altayboots.dto.admin.CreateProduct;
 
 import java.util.List;
@@ -25,4 +26,10 @@ public interface AdminService {
     List<CreateProduct> getProductsCatalog(int catalogId);
 
     void deleteCatalog(Integer catalogId);
+
+    void createCompanyDescription(CreateCompanyDescription createCompanyDescription);
+
+    CreateCompanyDescription getCompany();
+
+    void editCompany(CreateCompanyDescription companyDescription);
 }

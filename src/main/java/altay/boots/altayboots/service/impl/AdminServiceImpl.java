@@ -1,10 +1,13 @@
 package altay.boots.altayboots.service.impl;
 
 import altay.boots.altayboots.dto.admin.CreateCatalog;
+import altay.boots.altayboots.dto.admin.CreateCompanyDescription;
 import altay.boots.altayboots.dto.admin.CreateProduct;
 import altay.boots.altayboots.model.entity.Catalog;
+import altay.boots.altayboots.model.entity.Company;
 import altay.boots.altayboots.model.entity.Product;
 import altay.boots.altayboots.repository.CatalogRepo;
+import altay.boots.altayboots.repository.CompanyRepo;
 import altay.boots.altayboots.repository.ProductRepo;
 import altay.boots.altayboots.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import java.util.List;
 public class AdminServiceImpl implements AdminService {
     private final ProductRepo productRepo;
     private final CatalogRepo catalogRepo;
+    private final CompanyRepo companyRepo;
     @Override
     public void createProduct(CreateProduct createProduct) {
         Product product = new Product();
@@ -115,6 +119,41 @@ public class AdminServiceImpl implements AdminService {
         catalogRepo.deleteById(catalogId);
     }
 
+    @Override
+    public void createCompanyDescription(CreateCompanyDescription createCompanyDescription) {
+        Company company = new Company();
+        company.setName(createCompanyDescription.name());
+        company.setText(createCompanyDescription.text());
+        company.setPhotoURL(createCompanyDescription.photoURL());
+        company.setBase(createCompanyDescription.base());
+        company.setCity(createCompanyDescription.city());
+        companyRepo.save(company);
+    }
+
+    @Override
+    public CreateCompanyDescription getCompany() {
+        Company company = companyRepo.findById(1);
+        return new CreateCompanyDescription(
+                company.getName(),
+                company.getText(),
+                company.getPhotoURL(),
+                company.getBase(),
+                company.getCity()
+        );
+    }
+
+    @Override
+    public void editCompany(CreateCompanyDescription companyDescription) {
+        Company company = companyRepo.findById(1);
+
+        company.setName(companyDescription.name());
+        company.setText(companyDescription.text());
+        company.setPhotoURL(companyDescription.photoURL());
+        company.setBase(companyDescription.base());
+        company.setCity(companyDescription.city());
+
+        companyRepo.save(company);
+    }
 
     private CreateCatalog toDtoCatalog(Catalog catalog) {
         return new CreateCatalog(

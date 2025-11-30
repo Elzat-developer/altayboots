@@ -1,6 +1,7 @@
 package altay.boots.altayboots.controller;
 
 import altay.boots.altayboots.dto.admin.CreateCatalog;
+import altay.boots.altayboots.dto.admin.CreateCompanyDescription;
 import altay.boots.altayboots.dto.admin.CreateProduct;
 import altay.boots.altayboots.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,11 @@ public class AdminPanelController {
         List<CreateProduct> products = adminService.getProductsCatalog(catalog_id);
         return ResponseEntity.ok(products);
     }
+    @GetMapping("/company")
+    public ResponseEntity<CreateCompanyDescription> getCompany(){
+       CreateCompanyDescription companyDescription = adminService.getCompany();
+        return ResponseEntity.ok(companyDescription);
+    }
     @PostMapping("/create-product")
     public ResponseEntity<String> createProduct(@RequestBody CreateProduct createProduct){
         adminService.createProduct(createProduct);
@@ -44,6 +50,13 @@ public class AdminPanelController {
     public ResponseEntity<String> createCatalog(@RequestBody CreateCatalog createCatalog){
         adminService.createCatalog(createCatalog);
         return new ResponseEntity<>("Catalog successfully created!", HttpStatus.CREATED);
+    }
+    @PostMapping("/create-company")
+    public ResponseEntity<String> createCompanyDescription(
+            @RequestBody CreateCompanyDescription createCompanyDescription
+    ){
+        adminService.createCompanyDescription(createCompanyDescription);
+        return new ResponseEntity<>("Company successfully created!", HttpStatus.CREATED);
     }
     @PutMapping("/edit-product/{product_id}")
     public ResponseEntity<String> editProduct(
@@ -59,6 +72,11 @@ public class AdminPanelController {
     ){
         adminService.editCatalog(catalog_id,catalog);
         return new ResponseEntity<>("Catalog edit success!", HttpStatus.OK);
+    }
+    @PutMapping("/edit-company")
+    public ResponseEntity<String> editCompany(@RequestBody CreateCompanyDescription companyDescription){
+        adminService.editCompany(companyDescription);
+        return new ResponseEntity<>("Company edit success!", HttpStatus.OK);
     }
     @DeleteMapping("/delete-product/{product_id}")
     public ResponseEntity<String> deleteProduct(@PathVariable Integer product_id){
