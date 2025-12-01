@@ -30,4 +30,14 @@ public interface AdminService {
     CompanyDescription getCompany();
 
     void editCompany(CreateCompanyDescription companyDescription);
+
+    void createPromotion(CreatePromotion createPromotion);
+
+    List<GetPromotion> getPromotions();
+
+    GetPromotion getPromotion(int promotionId);
+
+    void editPromotion(int promotionId, CreatePromotion createPromotion);
+
+    void deletePromotion(Integer promotionId);
 }

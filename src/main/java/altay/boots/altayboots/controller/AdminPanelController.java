@@ -39,6 +39,16 @@ public class AdminPanelController {
        CompanyDescription companyDescription = adminService.getCompany();
         return ResponseEntity.ok(companyDescription);
     }
+    @GetMapping("/promotions")
+    public ResponseEntity<List<GetPromotion>> getPromotions(){
+        List<GetPromotion> promotions = adminService.getPromotions();
+        return ResponseEntity.ok(promotions);
+    }
+    @GetMapping("/promotion/{promotion_id}")
+    public ResponseEntity<GetPromotion> getPromotions(@PathVariable Integer promotion_id){
+        GetPromotion promotion = adminService.getPromotion(promotion_id);
+        return ResponseEntity.ok(promotion);
+    }
     @PostMapping("/create-product")
     public ResponseEntity<String> createProduct(@RequestBody CreateProduct createProduct){
         adminService.createProduct(createProduct);
@@ -56,6 +66,11 @@ public class AdminPanelController {
         adminService.createCompanyDescription(createCompanyDescription);
         return new ResponseEntity<>("Company successfully created!", HttpStatus.CREATED);
     }
+    @PostMapping("/create-promotion")
+    public ResponseEntity<String> createPromotion(@RequestBody CreatePromotion createPromotion){
+        adminService.createPromotion(createPromotion);
+        return new ResponseEntity<>("Promotion successfully created!", HttpStatus.CREATED);
+    }
     @PutMapping("/edit-product/{product_id}")
     public ResponseEntity<String> editProduct(
             @PathVariable Integer product_id,
@@ -72,9 +87,17 @@ public class AdminPanelController {
         return new ResponseEntity<>("Catalog edit success!", HttpStatus.OK);
     }
     @PutMapping("/edit-company")
-    public ResponseEntity<String> editCompany(@RequestBody CreateCompanyDescription companyDescription){
+    public ResponseEntity<String> editCompany(
+            @RequestBody CreateCompanyDescription companyDescription){
         adminService.editCompany(companyDescription);
         return new ResponseEntity<>("Company edit success!", HttpStatus.OK);
+    }
+    @PutMapping("/edit-promotion/{promotion_id}")
+    public ResponseEntity<String> editPromotion(
+            @PathVariable Integer promotion_id,
+            @RequestBody CreatePromotion createPromotion){
+        adminService.editPromotion(promotion_id,createPromotion);
+        return new ResponseEntity<>("Promotion edit success!", HttpStatus.OK);
     }
     @DeleteMapping("/delete-product/{product_id}")
     public ResponseEntity<String> deleteProduct(@PathVariable Integer product_id){
@@ -85,5 +108,10 @@ public class AdminPanelController {
     public ResponseEntity<String> deleteCatalog(@PathVariable Integer catalog_id){
         adminService.deleteCatalog(catalog_id);
         return new ResponseEntity<>("Catalog delete success!", HttpStatus.OK);
+    }
+    @DeleteMapping("/delete-promotion/{promotion_id}")
+    public ResponseEntity<String> deletePromotion(@PathVariable Integer promotion_id){
+        adminService.deletePromotion(promotion_id);
+        return new ResponseEntity<>("Promotion delete success!", HttpStatus.OK);
     }
 }

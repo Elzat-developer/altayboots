@@ -15,4 +15,7 @@ public class ProductPhoto {
     @ManyToOne
     @JoinColumn(name = "products_id",referencedColumnName = "id")
     private Product product;
+    @ManyToOne
+    @JoinColumn(name = "promotions_id",referencedColumnName = "id")
+    private Promotion promotion;
 }

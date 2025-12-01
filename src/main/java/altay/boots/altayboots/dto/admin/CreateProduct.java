@@ -1,5 +1,6 @@
 package altay.boots.altayboots.dto.admin;
 
+import altay.boots.altayboots.dto.status.PaidStatus;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -11,6 +12,7 @@ public record CreateProduct(
          int price,
          int oldPrice,
          List<MultipartFile> photos,
-         int catalog_id
+         int catalog_id,
+         PaidStatus paidStatus
 ) {
 }

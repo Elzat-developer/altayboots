@@ -15,4 +15,6 @@ public class Catalog {
     private String name;
     @OneToMany(mappedBy = "catalog")
     private List<Product> products;
+    @OneToMany(mappedBy = "catalog")
+    private List<Promotion> promotions;
 }

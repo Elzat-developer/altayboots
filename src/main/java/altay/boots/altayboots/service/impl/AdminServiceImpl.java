@@ -1,13 +1,11 @@
 package altay.boots.altayboots.service.impl;
 
 import altay.boots.altayboots.dto.admin.*;
-import altay.boots.altayboots.model.entity.Catalog;
-import altay.boots.altayboots.model.entity.Company;
-import altay.boots.altayboots.model.entity.Product;
-import altay.boots.altayboots.model.entity.ProductPhoto;
+import altay.boots.altayboots.model.entity.*;
 import altay.boots.altayboots.repository.CatalogRepo;
 import altay.boots.altayboots.repository.CompanyRepo;
 import altay.boots.altayboots.repository.ProductRepo;
+import altay.boots.altayboots.repository.PromotionRepo;
 import altay.boots.altayboots.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -36,6 +34,7 @@ public class AdminServiceImpl implements AdminService {
     private final ProductRepo productRepo;
     private final CatalogRepo catalogRepo;
     private final CompanyRepo companyRepo;
+    private final PromotionRepo promotionRepo;
     @Override
     public void createProduct(CreateProduct createProduct) {
         Product product = new Product();
@@ -101,7 +100,8 @@ public class AdminServiceImpl implements AdminService {
                 product.getPrice(),
                 product.getOldPrice(),
                 photoList,
-                product.getCatalog().getId()
+                product.getCatalog().getId(),
+                product.getPaidStatus()
         );
     }
 
@@ -115,6 +115,7 @@ public class AdminServiceImpl implements AdminService {
         product.setText(createProduct.text());
         product.setPrice(createProduct.price());
         product.setOldPrice(createProduct.oldPrice());
+        product.setPaidStatus(createProduct.paidStatus());
 
         Path uploadDir = Paths.get("C:/uploads/products");
         try {
@@ -258,6 +259,130 @@ public class AdminServiceImpl implements AdminService {
 
         companyRepo.save(company);
     }
+
+    @Override
+    public void createPromotion(CreatePromotion createPromotion) {
+        Promotion promotion = new Promotion();
+        promotion.setName(createPromotion.name());
+        promotion.setDescription(createPromotion.description());
+        promotion.setPercentageDiscounted(createPromotion.percentageDiscounted());
+        Catalog catalog = catalogRepo.findById(createPromotion.catalogId());
+        promotion.setCatalog(catalog);
+        Product product = productRepo.findById(createPromotion.productId());
+        promotion.setProduct(product);
+        promotion.setStartDate(createPromotion.startDate());
+        promotion.setEndDate(createPromotion.endDate());
+
+        Path uploadDir = Paths.get("C:/uploads/promotions");
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            throw new RuntimeException("Не удалось создать папку загрузки", e);
+        }
+
+        // 📷 СОХРАНЕНИЕ НЕСКОЛЬКИХ ФОТО
+        if (createPromotion.photos() != null) {
+            for (MultipartFile file : createPromotion.photos()) {
+
+                if (!file.isEmpty()) {
+                    String photoPath = processPhoto(file, uploadDir);
+
+                    ProductPhoto photo = new ProductPhoto();
+                    photo.setPhotoURL(photoPath);
+                    photo.setProduct(product);
+
+                    product.getPhotos().add(photo);
+                }
+            }
+        }
+        promotionRepo.save(promotion);
+    }
+
+    @Override
+    public List<GetPromotion> getPromotions() {
+        List<Promotion> promotions = promotionRepo.findAll();
+        return promotions.stream()
+                .map(this::toDtoPromotion)
+                .toList();
+    }
+
+    @Override
+    public GetPromotion getPromotion(int promotionId) {
+        Promotion promotion = promotionRepo.findById(promotionId);
+        return new GetPromotion(
+                promotion.getName(),
+                promotion.getDescription(),
+                promotion.getPhotos()
+                        .stream()
+                        .map(ProductPhoto::getPhotoURL)
+                        .toList(),
+                promotion.getPercentageDiscounted(),
+                promotion.isGlobal(),
+                promotion.getCatalog().getId(),
+                promotion.getProduct().getId(),
+                promotion.getStartDate(),
+                promotion.getEndDate()
+        );
+    }
+
+    @Override
+    public void editPromotion(int promotionId, CreatePromotion createPromotion) {
+        Promotion promotion = promotionRepo.findById(promotionId);
+        promotion.setName(createPromotion.name());
+        promotion.setDescription(createPromotion.description());
+        promotion.setPercentageDiscounted(createPromotion.percentageDiscounted());
+        promotion.setGlobal(createPromotion.global());
+        promotion.setStartDate(createPromotion.startDate());
+        promotion.setEndDate(createPromotion.endDate());
+
+        Path uploadDir = Paths.get("C:/uploads/products");
+        try {
+            Files.createDirectories(uploadDir);
+        } catch (IOException e) {
+            throw new RuntimeException("Не удалось создать папку загрузки", e);
+        }
+
+        // 📌 ЕСЛИ ПРИШЛИ НОВЫЕ ФОТО — УДАЛЯЕМ СТАРЫЕ
+        if (createPromotion.photos() != null && !createPromotion.photos().isEmpty()) {
+            promotion.getPhotos().clear();
+
+            for (MultipartFile file : createPromotion.photos()) {
+                if (!file.isEmpty()) {
+                    String photoPath = processPhoto(file, uploadDir);
+
+                    ProductPhoto photo = new ProductPhoto();
+                    photo.setPhotoURL(photoPath);
+                    photo.setPromotion(promotion);
+
+                    promotion.getPhotos().add(photo);
+                }
+            }
+        }
+        promotionRepo.save(promotion);
+    }
+
+    @Override
+    public void deletePromotion(Integer promotionId) {
+        promotionRepo.deleteById(promotionId);
+    }
+
+    private GetPromotion toDtoPromotion(Promotion promotion) {
+        return new GetPromotion(
+                promotion.getName(),
+                promotion.getDescription(),
+                promotion.getPhotos()
+                        .stream()
+                        .map(ProductPhoto::getPhotoURL)
+                        .toList(),
+                promotion.getPercentageDiscounted(),
+                promotion.isGlobal(),
+                promotion.getCatalog().getId(),
+                promotion.getProduct().getId(),
+                promotion.getStartDate(),
+                promotion.getEndDate()
+        );
+    }
+
     private String processPhoto(MultipartFile photo, Path uploadDir) {
         validateFileSize(photo, 10);
         String fileName = UUID.randomUUID() + "_" + photo.getOriginalFilename();
@@ -323,7 +448,8 @@ public class AdminServiceImpl implements AdminService {
                         .stream()
                         .map(ProductPhoto::getPhotoURL)
                         .toList(),
-                product.getCatalog().getId()
+                product.getCatalog().getId(),
+                product.getPaidStatus()
         );
     }
 }

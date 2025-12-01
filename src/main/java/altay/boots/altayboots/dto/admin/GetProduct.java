@@ -1,5 +1,7 @@
 package altay.boots.altayboots.dto.admin;
 
+import altay.boots.altayboots.dto.status.PaidStatus;
+
 import java.util.List;
 
 public record GetProduct(
@@ -9,6 +11,7 @@ public record GetProduct(
         int price,
         int oldPrice,
         List<String> photos,
-        int catalog_id
+        int catalog_id,
+        PaidStatus paidStatus
 ) {
 }
