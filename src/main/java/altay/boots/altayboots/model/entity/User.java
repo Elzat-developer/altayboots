@@ -29,8 +29,6 @@ public class User implements UserDetails {
     private String phone;
     @Enumerated(value = EnumType.STRING)
     private Authorities authorities;
-    @Column(name = "password_temporary")
-    private boolean passwordTemporary;
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(authorities.name()));

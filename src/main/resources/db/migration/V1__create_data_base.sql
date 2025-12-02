@@ -5,8 +5,7 @@ CREATE TABLE IF NOT EXISTS `users` (
                                        `lastname` varchar(255) DEFAULT NULL,
                                        `password` varchar(255) DEFAULT NULL,
                                        `phone` varchar(255) DEFAULT NULL,
-                                       `authorities` enum('ADMIN','USER') DEFAULT 'USER',
-                                       `password_temporary` BOOLEAN DEFAULT FALSE
+                                       `authorities` enum('ADMIN','USER') DEFAULT 'USER'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 CREATE TABLE IF NOT EXISTS products (
                                         id int auto_increment primary key,
