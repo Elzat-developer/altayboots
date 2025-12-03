@@ -1,17 +1,18 @@
 package altay.boots.altayboots.service;
 
 import altay.boots.altayboots.dto.admin.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface AdminService {
-    void createProduct(CreateProduct createProduct);
+    void createProduct(CreateProduct createProduct,List<MultipartFile> photos);
 
     List<GetProduct> getProducts();
 
     GetProduct getProduct(int productId);
 
-    void editProduct(int product_id,CreateProduct createProduct);
+    void editProduct(int product_id,CreateProduct createProduct,List<MultipartFile> photos);
 
     void deleteProduct(Integer productId);
 
@@ -25,19 +26,19 @@ public interface AdminService {
 
     void deleteCatalog(Integer catalogId);
 
-    void createCompanyDescription(CreateCompanyDescription createCompanyDescription);
+    void createCompanyDescription(CreateCompanyDescription createCompanyDescription, MultipartFile photo);
 
     CompanyDescription getCompany();
 
-    void editCompany(CreateCompanyDescription companyDescription);
+    void editCompany(CreateCompanyDescription companyDescription,MultipartFile photo);
 
-    void createPromotion(CreatePromotion createPromotion);
+    void createPromotion(CreatePromotion createPromotion,List<MultipartFile> photos);
 
     List<GetPromotion> getPromotions();
 
     GetPromotion getPromotion(int promotionId);
 
-    void editPromotion(int promotionId, CreatePromotion createPromotion);
+    void editPromotion(int promotionId, CreatePromotion createPromotion,List<MultipartFile> photos);
 
     void deletePromotion(Integer promotionId);
 }
