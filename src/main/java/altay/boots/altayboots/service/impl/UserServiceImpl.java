@@ -75,13 +75,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void createOrder(CreateOrder createOrder) {
+    public Integer createOrder(CreateOrder createOrder) {
 
         User user = getContextUser();
 
         Order order = new Order();
         order.setOrderStartDate(LocalDateTime.now());
         order.setPaidStatus(PaidStatus.NOTPAY);
+
+        user.setSurName(createOrder.surName());
+        user.setLastName(createOrder.lastName());
+        user.setRegion(createOrder.region());
+        user.setCityOrDistrict(createOrder.cityOrDistrict());
+        user.setStreet(createOrder.street());
+        user.setHouseOrApartment(createOrder.houseOrApartment());
+        user.setIndexPost(createOrder.index());
+        userRepo.save(user);
+
         order.setUser(user);
 
         List<OrderItem> items = new ArrayList<>();
@@ -102,8 +112,11 @@ public class UserServiceImpl implements UserService {
 
         order.setItems(items);
 
-        orderRepo.save(order);
+        Order savedOrder = orderRepo.save(order);
+
+        return savedOrder.getId(); // <-- ВОТ ЭТО ВАЖНО
     }
+
 
     @Override
     public List<GetOrder> getOrders(int userId) {
@@ -149,21 +162,6 @@ public class UserServiceImpl implements UserService {
 
         // благодаря orphanRemoval = true — удалится из таблицы order_items
         orderRepo.save(order);
-    }
-
-    @Override
-    public void createDelivery(CreateDelivery createDelivery) {
-        User user = getContextUser();
-
-        user.setSurName(createDelivery.surName());
-        user.setLastName(createDelivery.lastName());
-        user.setRegion(createDelivery.region());
-        user.setCityOrDistrict(createDelivery.cityOrDistrict());
-        user.setStreet(createDelivery.street());
-        user.setHouseOrApartment(createDelivery.houseOrApartment());
-        user.setIndexPost(createDelivery.index());
-
-        userRepo.save(user);
     }
 
     @Override

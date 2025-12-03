@@ -9,7 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -47,15 +49,20 @@ public class UserPanelController {
         return ResponseEntity.ok(userService.getCart());
     }
     @PostMapping("/create-order")
-    public ResponseEntity<String> createOrder(@RequestBody CreateOrder createOrder){
-        userService.createOrder(createOrder);
-        return new ResponseEntity<>("Order success created!", HttpStatus.CREATED);
+    public ResponseEntity<Map<String, Object>> createOrder(@RequestBody CreateOrder createOrder){
+
+        Integer orderId = userService.createOrder(createOrder);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("message", "Order создан успешно! \n" +
+                "скопируйте номер заказа и перейдите к оплате через whatsapp нажав на кнопку ниже\n" +
+                "вы должны отправить продавцу номер заказа\n" +
+                "Вам обязательно ответят в течение 1 часа");
+        body.put("Номер Заказа", orderId);
+
+        return new ResponseEntity<>(body, HttpStatus.CREATED);
     }
-    @PostMapping("/create-delivery")
-    public ResponseEntity<String> createDelivery(@RequestBody CreateDelivery createDelivery){
-        userService.createDelivery(createDelivery);
-        return new ResponseEntity<>("Order success created!", HttpStatus.CREATED);
-    }
+
     @PostMapping("/add-product-to-cart")
     public ResponseEntity<String> addProductToCart(@RequestBody AddToCartDto addToCartDto){
         userService.addProductToCart(addToCartDto);

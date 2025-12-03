@@ -12,7 +12,7 @@ public interface UserService {
 
     GetProductUser getProduct(int productId);
 
-    void createOrder(CreateOrder createOrder);
+    Integer createOrder(CreateOrder createOrder);
 
     List<GetOrder> getOrders(int userId);
 
@@ -22,8 +22,6 @@ public interface UserService {
 
     void deleteProductFromOrder(int orderId, int productId);
 
-    void createDelivery(CreateDelivery createDelivery);
-
     void addProductToCart(AddToCartDto addToCartDto);
 
     CartDto getCart();
@@ -31,4 +29,5 @@ public interface UserService {
     void editCart(EditCartItemDto editCartItemDto);
 
     void deleteCartItem(Integer itemId);
+
 }
