@@ -1,8 +1,8 @@
-package altay.boots.altayboots.dto.admin;
+package altay.boots.altayboots.dto.user;
 
 import java.util.List;
 
-public record GetProduct(
+public record GetProductUser(
         String name,
         String description,
         String text,

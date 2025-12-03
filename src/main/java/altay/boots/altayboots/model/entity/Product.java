@@ -1,6 +1,5 @@
 package altay.boots.altayboots.model.entity;
 
-import altay.boots.altayboots.dto.status.PaidStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -20,9 +19,6 @@ public class Product {
     private int price;
     @Column(name = "old_price")
     private int oldPrice;
-    @Column(name = "paid_status")
-    @Enumerated(EnumType.STRING)
-    private PaidStatus paidStatus;
     @ManyToOne
     @JoinColumn(name = "catalogs_id",referencedColumnName = "id")
     private Catalog catalog;
@@ -30,4 +26,8 @@ public class Product {
     private List<ProductPhoto> photos = new ArrayList<>();
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Promotion> promotions;
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> orderItems;
+    @ManyToMany(mappedBy = "products")
+    private List<Order> orders;
 }

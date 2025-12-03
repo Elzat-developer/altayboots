@@ -5,7 +5,12 @@ CREATE TABLE IF NOT EXISTS `users` (
                                        `lastname` varchar(255) DEFAULT NULL,
                                        `password` varchar(255) DEFAULT NULL,
                                        `phone` varchar(255) DEFAULT NULL,
-                                       `authorities` enum('ADMIN','USER') DEFAULT 'USER'
+                                       `authorities` enum('ADMIN','USER') DEFAULT 'USER',
+                                       region varchar(255) DEFAULT NULL,
+                                       city_or_district varchar(255) DEFAULT NULL,
+                                       street varchar(255) DEFAULT NULL,
+                                       house_or_apartment varchar(255) DEFAULT NULL,
+                                       index_post varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 CREATE TABLE IF NOT EXISTS products (
                                         id int auto_increment primary key,
@@ -14,7 +19,6 @@ CREATE TABLE IF NOT EXISTS products (
                                         text varchar(255) DEFAULT NULL,
                                         price int DEFAULT NULL,
                                         old_price int DEFAULT NULL,
-                                        paid_status enum('PAID','NOTPAY') DEFAULT 'NOTPAY',
                                         catalogs_id int DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 CREATE TABLE IF NOT EXISTS catalogs (
@@ -46,4 +50,31 @@ CREATE TABLE IF NOT EXISTS promotions (
                                          end_date varchar(255) DEFAULT NULL,
                                          catalogs_id int DEFAULT NULL,
                                          products_id int DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS orders (
+                                          id int auto_increment primary key,
+                                          name varchar(255) DEFAULT NULL,
+                                          order_start_date datetime DEFAULT NULL,
+                                          paid_status enum('PAID','NOTPAY') DEFAULT 'NOTPAY',
+                                          users_id int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS order_products (
+                                          orders_id int auto_increment primary key,
+                                          products_id int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS order_items (
+                                      id int auto_increment primary key,
+                                      quantity int DEFAULT NULL,
+                                      products_id int DEFAULT NULL,
+                                      orders_id int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS carts (
+                                      id int auto_increment primary key,
+                                      users_id int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS cart_items (
+                                      id int auto_increment primary key,
+                                      quantity int DEFAULT NULL,
+                                      carts_id int DEFAULT NULL,
+                                      products_id int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

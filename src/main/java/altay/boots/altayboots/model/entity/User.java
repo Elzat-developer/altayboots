@@ -7,6 +7,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -29,6 +30,16 @@ public class User implements UserDetails {
     private String phone;
     @Enumerated(value = EnumType.STRING)
     private Authorities authorities;
+    private String region;
+    @Column(name = "city_or_district")
+    private String cityOrDistrict;
+    private String street;
+    @Column(name = "house_or_apartment")
+    private String houseOrApartment;
+    @Column(name = "index_post")
+    private String indexPost;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Order> orders = new ArrayList<>();
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(authorities.name()));

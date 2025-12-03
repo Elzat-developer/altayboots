@@ -36,7 +36,7 @@ public class AdminServiceImpl implements AdminService {
     private final CompanyRepo companyRepo;
     private final PromotionRepo promotionRepo;
     @Override
-    public void createProduct(CreateProduct createProduct) {
+    public void createProduct(CreateProduct createProduct,List<MultipartFile> photos) {
         Product product = new Product();
         product.setName(createProduct.name());
         product.setDescription(createProduct.description());
@@ -57,8 +57,8 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // 📷 СОХРАНЕНИЕ НЕСКОЛЬКИХ ФОТО
-        if (createProduct.photos() != null) {
-            for (MultipartFile file : createProduct.photos()) {
+        if (photos != null) {
+            for (MultipartFile file : photos) {
 
                 if (!file.isEmpty()) {
                     String photoPath = processPhoto(file, uploadDir);
@@ -100,14 +100,13 @@ public class AdminServiceImpl implements AdminService {
                 product.getPrice(),
                 product.getOldPrice(),
                 photoList,
-                product.getCatalog().getId(),
-                product.getPaidStatus()
+                product.getCatalog().getId()
         );
     }
 
 
     @Override
-    public void editProduct(int product_id, CreateProduct createProduct) {
+    public void editProduct(int product_id, CreateProduct createProduct,List<MultipartFile> photos) {
         Product product = productRepo.findById(product_id);
 
         product.setName(createProduct.name());
@@ -115,7 +114,6 @@ public class AdminServiceImpl implements AdminService {
         product.setText(createProduct.text());
         product.setPrice(createProduct.price());
         product.setOldPrice(createProduct.oldPrice());
-        product.setPaidStatus(createProduct.paidStatus());
 
         Path uploadDir = Paths.get("C:/uploads/products");
         try {
@@ -125,10 +123,10 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // 📌 ЕСЛИ ПРИШЛИ НОВЫЕ ФОТО — УДАЛЯЕМ СТАРЫЕ
-        if (createProduct.photos() != null && !createProduct.photos().isEmpty()) {
+        if (photos != null && !photos.isEmpty()) {
             product.getPhotos().clear();
 
-            for (MultipartFile file : createProduct.photos()) {
+            for (MultipartFile file : photos) {
                 if (!file.isEmpty()) {
                     String photoPath = processPhoto(file, uploadDir);
 
@@ -194,7 +192,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void createCompanyDescription(CreateCompanyDescription createCompanyDescription) {
+    public void createCompanyDescription(CreateCompanyDescription createCompanyDescription,MultipartFile photo) {
         Company company = new Company();
         company.setName(createCompanyDescription.name());
         company.setText(createCompanyDescription.text());
@@ -208,8 +206,8 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // 📷 Фото
-        if (createCompanyDescription.photoURL() != null && !createCompanyDescription.photoURL().isEmpty()) {
-            String photoPath = processPhoto(createCompanyDescription.photoURL(), uploadDir);
+        if (photo != null && !photo.isEmpty()) {
+            String photoPath = processPhoto(photo, uploadDir);
             company.setPhotoURL(photoPath);
             log.info("✅ Фото успешно сохранено: {}", photoPath);
         }
@@ -232,7 +230,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void editCompany(CreateCompanyDescription companyDescription) {
+    public void editCompany(CreateCompanyDescription companyDescription,MultipartFile photo) {
         Company company = companyRepo.findById(1);
 
         company.setName(companyDescription.name());
@@ -248,8 +246,8 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // 📷 Фото
-        if (companyDescription.photoURL() != null && !companyDescription.photoURL().isEmpty()) {
-            String photoPath = processPhoto(companyDescription.photoURL(), uploadDir);
+        if (photo != null && !photo.isEmpty()) {
+            String photoPath = processPhoto(photo, uploadDir);
             company.setPhotoURL(photoPath);
             log.info("✅ Фото успешно сохранено: {}", photoPath);
         }
@@ -261,7 +259,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void createPromotion(CreatePromotion createPromotion) {
+    public void createPromotion(CreatePromotion createPromotion,List<MultipartFile> photos) {
         Promotion promotion = new Promotion();
         promotion.setName(createPromotion.name());
         promotion.setDescription(createPromotion.description());
@@ -281,8 +279,8 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // 📷 СОХРАНЕНИЕ НЕСКОЛЬКИХ ФОТО
-        if (createPromotion.photos() != null) {
-            for (MultipartFile file : createPromotion.photos()) {
+        if (photos != null) {
+            for (MultipartFile file : photos) {
 
                 if (!file.isEmpty()) {
                     String photoPath = processPhoto(file, uploadDir);
@@ -326,7 +324,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void editPromotion(int promotionId, CreatePromotion createPromotion) {
+    public void editPromotion(int promotionId, CreatePromotion createPromotion,List<MultipartFile> photos) {
         Promotion promotion = promotionRepo.findById(promotionId);
         promotion.setName(createPromotion.name());
         promotion.setDescription(createPromotion.description());
@@ -343,10 +341,10 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // 📌 ЕСЛИ ПРИШЛИ НОВЫЕ ФОТО — УДАЛЯЕМ СТАРЫЕ
-        if (createPromotion.photos() != null && !createPromotion.photos().isEmpty()) {
+        if (photos != null && !photos.isEmpty()) {
             promotion.getPhotos().clear();
 
-            for (MultipartFile file : createPromotion.photos()) {
+            for (MultipartFile file : photos) {
                 if (!file.isEmpty()) {
                     String photoPath = processPhoto(file, uploadDir);
 
@@ -448,8 +446,7 @@ public class AdminServiceImpl implements AdminService {
                         .stream()
                         .map(ProductPhoto::getPhotoURL)
                         .toList(),
-                product.getCatalog().getId(),
-                product.getPaidStatus()
+                product.getCatalog().getId()
         );
     }
 }
