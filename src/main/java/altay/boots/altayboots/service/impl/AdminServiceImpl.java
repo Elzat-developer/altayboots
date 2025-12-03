@@ -192,7 +192,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void createCompanyDescription(CreateCompanyDescription createCompanyDescription,MultipartFile photo) {
+    public void createCompanyDescription(CreateCompanyDescription createCompanyDescription, MultipartFile photo) {
         Company company = new Company();
         company.setName(createCompanyDescription.name());
         company.setText(createCompanyDescription.text());

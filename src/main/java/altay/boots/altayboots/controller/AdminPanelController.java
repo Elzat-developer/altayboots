@@ -53,7 +53,7 @@ public class AdminPanelController {
     }
     @PostMapping(value = "/create-product",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> createProduct(
-            @RequestPart("data") CreateProduct createProduct,
+            @ModelAttribute CreateProduct createProduct,
             @RequestPart("photos") List<MultipartFile> photos){
         adminService.createProduct(createProduct,photos);
         return new ResponseEntity<>("Product successfully created!", HttpStatus.CREATED);
@@ -65,7 +65,7 @@ public class AdminPanelController {
     }
     @PostMapping(value = "/create-company", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> createCompanyDescription(
-            @RequestPart("data") CreateCompanyDescription createCompanyDescription,
+            @ModelAttribute CreateCompanyDescription createCompanyDescription,
             @RequestPart("photo") MultipartFile photo
     ){
         adminService.createCompanyDescription(createCompanyDescription,photo);
@@ -73,7 +73,7 @@ public class AdminPanelController {
     }
     @PostMapping(value = "/create-promotion",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> createPromotion(
-            @RequestPart("data") CreatePromotion createPromotion,
+            @ModelAttribute CreatePromotion createPromotion,
             @RequestPart("photos") List<MultipartFile> photos
     ){
         adminService.createPromotion(createPromotion,photos);
@@ -82,7 +82,7 @@ public class AdminPanelController {
     @PutMapping(value = "/edit-product/{product_id}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> editProduct(
             @PathVariable Integer product_id,
-            @RequestPart("data") CreateProduct createProduct,
+            @ModelAttribute CreateProduct createProduct,
             @RequestPart("photos") List<MultipartFile> photos){
         adminService.editProduct(product_id,createProduct,photos);
         return new ResponseEntity<>("Product edit success!", HttpStatus.OK);
@@ -97,7 +97,7 @@ public class AdminPanelController {
     }
     @PutMapping(value = "/edit-company",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> editCompany(
-            @RequestPart("data") CreateCompanyDescription companyDescription,
+            @ModelAttribute CreateCompanyDescription companyDescription,
             @RequestPart("photo") MultipartFile photo){
         adminService.editCompany(companyDescription,photo);
         return new ResponseEntity<>("Company edit success!", HttpStatus.OK);
@@ -105,7 +105,7 @@ public class AdminPanelController {
     @PutMapping(value = "/edit-promotion/{promotion_id}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> editPromotion(
             @PathVariable Integer promotion_id,
-            @RequestPart("data") CreatePromotion createPromotion,
+            @ModelAttribute CreatePromotion createPromotion,
             @RequestPart("photos") List<MultipartFile> photos){
         adminService.editPromotion(promotion_id,createPromotion,photos);
         return new ResponseEntity<>("Promotion edit success!", HttpStatus.OK);
