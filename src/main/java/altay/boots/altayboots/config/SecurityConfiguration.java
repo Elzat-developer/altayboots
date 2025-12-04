@@ -85,8 +85,15 @@ public class SecurityConfiguration {
                 "http://192.168.1.110:3000", // 🔥 твой реальный IP, если фронт заходит по сети
                 "http://127.0.0.1:5500"
         ));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*")); // Разрешаем все заголовки
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",      // ← Главный заголовок для JWT
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "X-Requested-With"
+        ));
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true); // если нужно передавать куки/авторизацию
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

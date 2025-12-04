@@ -33,14 +33,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
         final String phone;
-
-        if (StringUtils.isEmpty(authHeader) || !org.apache.commons.lang3.StringUtils.startsWith(authHeader, "Bearer ")) {
+        //if (StringUtils.isEmpty(authHeader) || !org.apache.commons.lang3.StringUtils.startsWith(authHeader, "Bearer ")) {
+        //    filterChain.doFilter(request, response);
+        //    return;
+        //}
+        if (StringUtils.isEmpty(authHeader)) {
+            System.out.println("⚠️ [JWT Filter] No Authorization header found");
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring(7);
+        if (authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+            System.out.println("✅ [JWT Filter] Token extracted WITH 'Bearer' prefix");
+        } else {
+            // ⚠️ если Bearer нет — принимаем как токен
+            jwt = authHeader;
+            System.out.println("✅ [JWT Filter] Token extracted WITH 'Bearer' prefix");
+        }
+        try {
         phone = jwtService.extractUserName(jwt);
+        System.out.println("✅ [JWT Filter] Extracted phone: " + phone);
 
         if (StringUtils.isNotEmpty(phone) && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userService.userDetailsService().loadUserByUsername(phone);
@@ -58,9 +71,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 token.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 securityContext.setAuthentication(token);
                 SecurityContextHolder.setContext(securityContext);
+                System.out.println("✅ [JWT Filter] Authorities: " + authorities);
+                System.out.println("✅ [JWT Filter] Authentication successful for: " + phone);
             }
         }
 
         filterChain.doFilter(request, response);
+        } catch (Exception e) {
+            System.out.println("❌ [JWT Filter] Error processing token: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
