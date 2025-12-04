@@ -4,6 +4,7 @@ import altay.boots.altayboots.dto.admin.CompanyDescription;
 import altay.boots.altayboots.dto.user.*;
 import altay.boots.altayboots.service.AdminService;
 import altay.boots.altayboots.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -69,7 +70,7 @@ public class UserPanelController {
         return new ResponseEntity<>("Add Product to Cart success!", HttpStatus.OK);
     }
     @PutMapping("/edit-cart")
-    public ResponseEntity<String> editCart(@RequestBody EditCartItemDto editCartItemDto) {
+    public ResponseEntity<String> editCart(@Valid @RequestBody EditCartItemDto editCartItemDto) {
         userService.editCart(editCartItemDto);
         return ResponseEntity.ok("Cart updated");
     }

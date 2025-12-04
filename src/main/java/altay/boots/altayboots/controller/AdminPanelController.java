@@ -82,9 +82,9 @@ public class AdminPanelController {
     @PutMapping(value = "/edit-product/{product_id}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> editProduct(
             @PathVariable Integer product_id,
-            @ModelAttribute CreateProduct createProduct,
-            @RequestPart("photos") List<MultipartFile> photos){
-        adminService.editProduct(product_id,createProduct,photos);
+            @ModelAttribute EditProduct editProduct,
+            @RequestPart(value = "photos",required = false) List<MultipartFile> photos){
+        adminService.editProduct(product_id,editProduct,photos);
         return new ResponseEntity<>("Product edit success!", HttpStatus.OK);
     }
     @PutMapping("/edit-catalog/{catalog_id}")
@@ -98,16 +98,16 @@ public class AdminPanelController {
     @PutMapping(value = "/edit-company",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> editCompany(
             @ModelAttribute CreateCompanyDescription companyDescription,
-            @RequestPart("photo") MultipartFile photo){
+            @RequestPart(value = "photo",required = false) MultipartFile photo){
         adminService.editCompany(companyDescription,photo);
         return new ResponseEntity<>("Company edit success!", HttpStatus.OK);
     }
     @PutMapping(value = "/edit-promotion/{promotion_id}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> editPromotion(
             @PathVariable Integer promotion_id,
-            @ModelAttribute CreatePromotion createPromotion,
-            @RequestPart("photos") List<MultipartFile> photos){
-        adminService.editPromotion(promotion_id,createPromotion,photos);
+            @ModelAttribute EditPromotion editPromotion,
+            @RequestPart(value = "photos",required = false) List<MultipartFile> photos){
+        adminService.editPromotion(promotion_id,editPromotion,photos);
         return new ResponseEntity<>("Promotion edit success!", HttpStatus.OK);
     }
     @DeleteMapping("/delete-product/{product_id}")

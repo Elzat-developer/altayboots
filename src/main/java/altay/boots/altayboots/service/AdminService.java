@@ -12,7 +12,7 @@ public interface AdminService {
 
     GetProduct getProduct(int productId);
 
-    void editProduct(int product_id,CreateProduct createProduct,List<MultipartFile> photos);
+    void editProduct(int product_id,EditProduct editProduct,List<MultipartFile> photos);
 
     void deleteProduct(Integer productId);
 
@@ -38,7 +38,7 @@ public interface AdminService {
 
     GetPromotion getPromotion(int promotionId);
 
-    void editPromotion(int promotionId, CreatePromotion createPromotion,List<MultipartFile> photos);
+    void editPromotion(int promotionId, EditPromotion editPromotion,List<MultipartFile> photos);
 
     void deletePromotion(Integer promotionId);
 }

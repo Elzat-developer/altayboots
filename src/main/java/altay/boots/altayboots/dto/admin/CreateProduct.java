@@ -4,8 +4,8 @@ public record CreateProduct(
          String name,
          String description,
          String text,
-         int price,
-         int oldPrice,
+         Integer price,
+         Integer oldPrice,
          int catalog_id
 ) {
 }

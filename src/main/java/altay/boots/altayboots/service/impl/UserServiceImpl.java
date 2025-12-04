@@ -27,7 +27,7 @@ public class UserServiceImpl implements UserService {
     private final CartItemRepository cartItemRepo;
     @Bean
     public UserDetailsService userDetailsService(){
-        return userRepo::findByName;
+        return userRepo::findByPhone;
     }
 
     @Override

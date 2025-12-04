@@ -22,9 +22,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JWTService jwtService;
     private final PasswordEncoder passwordEncoder;
     public JwtAuthenticationResponce signIn(SignInRequest signInRequest) {
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(signInRequest.name(),
-                signInRequest.password()));
-        var user = userRepo.findByName(signInRequest.name());
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        signInRequest.phone(),
+                        signInRequest.password()
+                )
+        );
+        User user = userRepo.findByPhone(signInRequest.phone());
         var jwt = jwtService.generateToken(user);
 
         return new JwtAuthenticationResponce(jwt);

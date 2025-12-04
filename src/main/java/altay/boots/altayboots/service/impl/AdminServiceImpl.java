@@ -106,14 +106,23 @@ public class AdminServiceImpl implements AdminService {
 
 
     @Override
-    public void editProduct(int product_id, CreateProduct createProduct,List<MultipartFile> photos) {
+    public void editProduct(int product_id, EditProduct editProduct,List<MultipartFile> photos) {
         Product product = productRepo.findById(product_id);
 
-        product.setName(createProduct.name());
-        product.setDescription(createProduct.description());
-        product.setText(createProduct.text());
-        product.setPrice(createProduct.price());
-        product.setOldPrice(createProduct.oldPrice());
+        if (editProduct.name() != null)
+            product.setName(editProduct.name());
+
+        if (editProduct.description() != null)
+            product.setDescription(editProduct.description());
+
+        if (editProduct.text() != null)
+            product.setText(editProduct.text());
+
+        if (editProduct.price() != null)
+            product.setPrice(editProduct.price());
+
+        if (editProduct.oldPrice() != null)
+            product.setOldPrice(editProduct.oldPrice());
 
         Path uploadDir = Paths.get("C:/uploads/products");
         try {
@@ -151,7 +160,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void createCatalog(CreateCatalog createCatalog) {
         Catalog catalog = new Catalog();
-        catalog.setName(catalog.getName());
+        catalog.setName(createCatalog.name());
         catalogRepo.save(catalog);
     }
 
@@ -324,14 +333,26 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void editPromotion(int promotionId, CreatePromotion createPromotion,List<MultipartFile> photos) {
+    public void editPromotion(int promotionId, EditPromotion editPromotion,List<MultipartFile> photos) {
         Promotion promotion = promotionRepo.findById(promotionId);
-        promotion.setName(createPromotion.name());
-        promotion.setDescription(createPromotion.description());
-        promotion.setPercentageDiscounted(createPromotion.percentageDiscounted());
-        promotion.setGlobal(createPromotion.global());
-        promotion.setStartDate(createPromotion.startDate());
-        promotion.setEndDate(createPromotion.endDate());
+
+        if (editPromotion.name() != null)
+            promotion.setName(editPromotion.name());
+
+        if (editPromotion.description() != null)
+            promotion.setDescription(editPromotion.description());
+
+        if (editPromotion.percentageDiscounted() != null)
+            promotion.setPercentageDiscounted(editPromotion.percentageDiscounted());
+
+        if (editPromotion.global() != null)
+            promotion.setGlobal(editPromotion.global());
+
+        if (editPromotion.startDate() != null)
+            promotion.setStartDate(editPromotion.startDate());
+
+        if (editPromotion.endDate() != null)
+            promotion.setEndDate(editPromotion.endDate());
 
         Path uploadDir = Paths.get("C:/uploads/products");
         try {
