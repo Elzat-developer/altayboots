@@ -41,4 +41,12 @@ public interface AdminService {
     void editPromotion(int promotionId, EditPromotion editPromotion,List<MultipartFile> photos);
 
     void deletePromotion(Integer promotionId);
+
+    List<GetAdminOrderSimple> getOrders();
+
+    GetAdminOrder getOrder(Integer orderId);
+
+    void editOrder(Integer orderId,EditOrder editOrder);
+
+    void deleteOrder(Integer orderId);
 }

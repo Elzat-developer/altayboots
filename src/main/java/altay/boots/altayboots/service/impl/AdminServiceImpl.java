@@ -2,10 +2,7 @@ package altay.boots.altayboots.service.impl;
 
 import altay.boots.altayboots.dto.admin.*;
 import altay.boots.altayboots.model.entity.*;
-import altay.boots.altayboots.repository.CatalogRepo;
-import altay.boots.altayboots.repository.CompanyRepo;
-import altay.boots.altayboots.repository.ProductRepo;
-import altay.boots.altayboots.repository.PromotionRepo;
+import altay.boots.altayboots.repository.*;
 import altay.boots.altayboots.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -35,6 +32,7 @@ public class AdminServiceImpl implements AdminService {
     private final CatalogRepo catalogRepo;
     private final CompanyRepo companyRepo;
     private final PromotionRepo promotionRepo;
+    private final OrderRepo orderRepo;
     @Override
     public void createProduct(CreateProduct createProduct,List<MultipartFile> photos) {
         Product product = new Product();
@@ -384,6 +382,93 @@ public class AdminServiceImpl implements AdminService {
     public void deletePromotion(Integer promotionId) {
         promotionRepo.deleteById(promotionId);
     }
+
+    @Override
+    public List<GetAdminOrderSimple> getOrders() {
+        List<Order> orders = orderRepo.findAll();
+        return orders.stream()
+                .map(this::toDtoOrders)
+                .toList();
+    }
+
+    @Override
+    public GetAdminOrder getOrder(Integer orderId) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Пользователь
+        User u = order.getUser();
+        UserDto userDto = new UserDto(
+                u.getName(),
+                u.getSurName(),
+                u.getLastName(),
+                u.getPhone(),
+                u.getRegion(),
+                u.getCityOrDistrict(),
+                u.getStreet(),
+                u.getHouseOrApartment(),
+                u.getIndexPost()
+        );
+
+        // Список товаров с количеством
+        List<OrderItemFullDto> items = order.getItems()
+                .stream()
+                .map(oi -> {
+                    Product p = oi.getProduct();
+
+                    List<ProductPhotoDto> photoDtos = p.getPhotos()
+                            .stream()
+                            .map(photo -> new ProductPhotoDto(photo.getPhotoURL()))
+                            .toList();
+
+                    ProductDto productDto = new ProductDto(
+                            p.getId(),
+                            p.getName(),
+                            p.getDescription(),
+                            p.getText(),
+                            p.getPrice(),
+                            p.getOldPrice(),
+                            p.getCatalog() != null ? p.getCatalog().getId() : null,
+                            photoDtos
+                    );
+                    return new OrderItemFullDto(productDto, oi.getQuantity());
+                })
+                .toList();
+
+        return new GetAdminOrder(
+                order.getId(),
+                order.getOrderStartDate(),
+                order.getPaidStatus(),
+                userDto,
+                items
+        );
+    }
+
+    @Override
+    public void editOrder(Integer orderId,EditOrder editOrder) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        if (editOrder.paidStatus() != null) {
+            order.setPaidStatus(editOrder.paidStatus());
+        }
+        orderRepo.save(order);
+    }
+
+    @Override
+    public void deleteOrder(Integer orderId) {
+        orderRepo.deleteById(orderId);
+    }
+
+
+    private GetAdminOrderSimple toDtoOrders(Order order) {
+        return new GetAdminOrderSimple(
+                order.getId(),
+                order.getUser().getName(),
+                order.getOrderStartDate(),
+                order.getPaidStatus()
+        );
+    }
+
 
     private GetPromotion toDtoPromotion(Promotion promotion) {
         return new GetPromotion(

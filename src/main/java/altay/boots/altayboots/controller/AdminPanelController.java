@@ -51,6 +51,16 @@ public class AdminPanelController {
         GetPromotion promotion = adminService.getPromotion(promotion_id);
         return ResponseEntity.ok(promotion);
     }
+    @GetMapping("/orders")
+    public ResponseEntity<List<GetAdminOrderSimple>> getOrders(){
+        List<GetAdminOrderSimple> orders = adminService.getOrders();
+        return ResponseEntity.ok(orders);
+    }
+    @GetMapping("/order/{order_id}")
+    public ResponseEntity<GetAdminOrder> getOrders(@PathVariable Integer order_id){
+        GetAdminOrder order = adminService.getOrder(order_id);
+        return ResponseEntity.ok(order);
+    }
     @PostMapping(value = "/create-product",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> createProduct(
             @ModelAttribute CreateProduct createProduct,
@@ -110,6 +120,11 @@ public class AdminPanelController {
         adminService.editPromotion(promotion_id,editPromotion,photos);
         return new ResponseEntity<>("Promotion edit success!", HttpStatus.OK);
     }
+    @PutMapping("/edit-order/{order_id}")
+    public ResponseEntity<String> editOrder(@PathVariable Integer order_id,@RequestBody EditOrder editOrder){
+        adminService.editOrder(order_id,editOrder);
+        return new ResponseEntity<>("Order edit success!", HttpStatus.OK);
+    }
     @DeleteMapping("/delete-product/{product_id}")
     public ResponseEntity<String> deleteProduct(@PathVariable Integer product_id){
         adminService.deleteProduct(product_id);
@@ -124,5 +139,10 @@ public class AdminPanelController {
     public ResponseEntity<String> deletePromotion(@PathVariable Integer promotion_id){
         adminService.deletePromotion(promotion_id);
         return new ResponseEntity<>("Promotion delete success!", HttpStatus.OK);
+    }
+    @DeleteMapping("/delete-order/{order_id}")
+    public ResponseEntity<String> deleteOrder(@PathVariable Integer order_id){
+        adminService.deleteOrder(order_id);
+        return new ResponseEntity<>("Order delete success!", HttpStatus.OK);
     }
 }
