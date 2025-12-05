@@ -4,6 +4,11 @@ import altay.boots.altayboots.dto.admin.CompanyDescription;
 import altay.boots.altayboots.dto.user.*;
 import altay.boots.altayboots.service.AdminService;
 import altay.boots.altayboots.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,69 +22,122 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/user")
 @RequiredArgsConstructor
+@Tag(name = "Пользовательская панель", description = "Эндпоинты для работы с товарами, корзиной и заказами")
 public class UserPanelController {
+
     private final UserService userService;
     private final AdminService adminService;
+
     @GetMapping("/products")
-    public ResponseEntity<List<GetProductUser>> getProducts(){
-        List<GetProductUser> productList = userService.getProducts();
-        return ResponseEntity.ok(productList);
+    @Operation(
+            summary = "Получить список продуктов",
+            description = "Возвращает список товаров для пользовательской витрины"
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Список товаров успешно получен",
+            content = @Content(schema = @Schema(implementation = GetProductUser.class))
+    )
+    public ResponseEntity<List<GetProductUser>> getProducts() {
+        return ResponseEntity.ok(userService.getProducts());
     }
+
     @GetMapping("/product/{product_id}")
-    public ResponseEntity<GetProductUser> getProducts(@PathVariable Integer product_id){
-        GetProductUser product = userService.getProduct(product_id);
-        return ResponseEntity.ok(product);
+    @Operation(
+            summary = "Получить один продукт",
+            description = "Возвращает данные одного товара по его ID"
+    )
+    public ResponseEntity<GetProductUser> getProducts(@PathVariable Integer product_id) {
+        return ResponseEntity.ok(userService.getProduct(product_id));
     }
+
     @GetMapping("/company")
-    public ResponseEntity<CompanyDescription> getCompany(){
-        CompanyDescription companyDescription = adminService.getCompany();
-        return ResponseEntity.ok(companyDescription);
+    @Operation(
+            summary = "Получить данные о компании",
+            description = "Возвращает описание компании"
+    )
+    public ResponseEntity<CompanyDescription> getCompany() {
+        return ResponseEntity.ok(adminService.getCompany());
     }
+
     @GetMapping("/orders/{user_id}")
-    public ResponseEntity<List<GetOrder>> getOrders(@PathVariable Integer user_id){
-        List<GetOrder> orders = userService.getOrders(user_id);
-        return ResponseEntity.ok(orders);
+    @Operation(
+            summary = "Получить заказы пользователя",
+            description = "Возвращает список заказов по user_id"
+    )
+    public ResponseEntity<List<GetOrder>> getOrders(@PathVariable Integer user_id) {
+        return ResponseEntity.ok(userService.getOrders(user_id));
     }
+
     @GetMapping("/order/{order_id}")
-    public ResponseEntity<GetOrder> getOrder(@PathVariable Integer order_id){
-        GetOrder order = userService.getOrder(order_id);
-        return ResponseEntity.ok(order);
+    @Operation(
+            summary = "Получить один заказ",
+            description = "Возвращает детали заказа по ID"
+    )
+    public ResponseEntity<GetOrder> getOrder(@PathVariable Integer order_id) {
+        return ResponseEntity.ok(userService.getOrder(order_id));
     }
+
     @GetMapping("/cart")
+    @Operation(
+            summary = "Получить корзину",
+            description = "Возвращает текущую корзину пользователя"
+    )
     public ResponseEntity<CartDto> getCart() {
         return ResponseEntity.ok(userService.getCart());
     }
+
     @PostMapping("/create-order")
-    public ResponseEntity<Map<String, Object>> createOrder(@RequestBody CreateOrder createOrder){
+    @Operation(
+            summary = "Создать заказ",
+            description = "Создаёт заказ на основе данных корзины и адреса"
+    )
+    public ResponseEntity<Map<String, Object>> createOrder(@RequestBody CreateOrder createOrder) {
 
         Integer orderId = userService.createOrder(createOrder);
 
         Map<String, Object> body = new HashMap<>();
-        body.put("message", "Order создан успешно! \n" +
-                "скопируйте номер заказа и перейдите к оплате через whatsapp нажав на кнопку ниже\n" +
-                "вы должны отправить продавцу номер заказа\n" +
-                "Вам обязательно ответят в течение 1 часа");
+        body.put("message", "Order создан успешно! ...");
         body.put("Номер Заказа", orderId);
 
         return new ResponseEntity<>(body, HttpStatus.CREATED);
     }
 
     @PostMapping("/add-product-to-cart")
-    public ResponseEntity<String> addProductToCart(@RequestBody AddToCartDto addToCartDto){
+    @Operation(
+            summary = "Добавить продукт в корзину",
+            description = "Добавляет указанный товар в корзину пользователя"
+    )
+    public ResponseEntity<String> addProductToCart(@RequestBody AddToCartDto addToCartDto) {
         userService.addProductToCart(addToCartDto);
-        return new ResponseEntity<>("Add Product to Cart success!", HttpStatus.OK);
+        return ResponseEntity.ok("Add Product to Cart success!");
     }
+
     @PutMapping("/edit-cart")
+    @Operation(
+            summary = "Изменить количество товара в корзине",
+            description = "Позволяет обновить количество единиц товара в корзине"
+    )
     public ResponseEntity<String> editCart(@Valid @RequestBody EditCartItemDto editCartItemDto) {
         userService.editCart(editCartItemDto);
         return ResponseEntity.ok("Cart updated");
     }
+
     @DeleteMapping("/delete-order/{order_id}")
-    public ResponseEntity<String> deleteOrder(@PathVariable Integer order_id){
+    @Operation(
+            summary = "Удалить заказ",
+            description = "Удаляет заказ по ID"
+    )
+    public ResponseEntity<String> deleteOrder(@PathVariable Integer order_id) {
         userService.deleteOrder(order_id);
-        return new ResponseEntity<>("Order delete success!", HttpStatus.OK);
+        return ResponseEntity.ok("Order delete success!");
     }
+
     @DeleteMapping("/order/{orderId}/product/{productId}")
+    @Operation(
+            summary = "Удалить товар из заказа",
+            description = "Удаляет продукт из заказа"
+    )
     public ResponseEntity<String> deleteProductFromOrder(
             @PathVariable Integer orderId,
             @PathVariable Integer productId
@@ -87,7 +145,12 @@ public class UserPanelController {
         userService.deleteProductFromOrder(orderId, productId);
         return ResponseEntity.ok("Product removed from order");
     }
+
     @DeleteMapping("/delete-cart-item/{itemId}")
+    @Operation(
+            summary = "Удалить товар из корзины",
+            description = "Удаляет позицию корзины по ID"
+    )
     public ResponseEntity<String> deleteCartItem(@PathVariable Integer itemId) {
         userService.deleteCartItem(itemId);
         return ResponseEntity.ok("Item removed");
