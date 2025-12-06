@@ -24,9 +24,10 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            # Переходим в папку проекта или создаём её
             cd ~/project || mkdir -p ~/project
 
-            # Клонируем репозиторий если ещё нет .git
+            # Клонируем репозиторий, если ещё нет .git, иначе делаем pull
             if [ ! -d ".git" ]; then
               git clone https://github.com/Elzat-developer/altayboots.git .
             else
@@ -36,9 +37,9 @@ jobs:
             # Делаем gradlew исполняемым
             chmod +x gradlew
 
-            # Сборка без тестов
+            # Собираем проект без тестов
             ./gradlew build -x test
 
-            # Перезапуск Spring Boot приложения (если есть systemd сервис)
-            # systemctl restart altayboots.service
+            # Перезапускаем Spring Boot приложение через systemd
+            sudo systemctl restart altayboots.service
           EOF
