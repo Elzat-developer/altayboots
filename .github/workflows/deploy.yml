@@ -3,7 +3,7 @@ name: Deploy to VPS
 on:
   push:
     branches:
-      - main  # ветка, при пуше которой будет деплой
+      - main
 
 jobs:
   deploy:
@@ -22,9 +22,11 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             cd ~/project || mkdir -p ~/project
-            git pull origin main
-            # если у тебя Gradle-проект:
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/твой-username/твой-repo.git .
+            else
+              git pull origin main
+            fi
             ./gradlew build
-            # перезапуск приложения (если нужно)
             # systemctl restart my-app.service
           EOF
