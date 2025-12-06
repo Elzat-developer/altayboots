@@ -82,8 +82,6 @@ public class SecurityConfiguration {
         // 1. РАЗРЕШЕННЫЕ ИСТОЧНИКИ (Allowed Origins)
         configuration.setAllowedOrigins(List.of(
                 // VERCEL PRODUCTION FRONTEND
-                "https://altay-boots-frontend.vercel.app", // Ваш фронтенд на HTTPS
-                "https://altay-boots-frontend.vercel.app/",
 
                 // LOCAL DEVELOPMENT (Рекомендуется использовать HTTPS, если возможно)
                 "http://localhost:3000",
