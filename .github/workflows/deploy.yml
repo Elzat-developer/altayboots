@@ -1,43 +1,54 @@
-name: Deploy AltayBoots
+name: Deploy Spring Boot Application
 
 on:
   push:
     branches:
-      - main  # деплой при пуше в main
+      - main # Запускать при пуше в ветку main
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: ubuntu-latest # Используем стандартный GitHub runner
 
     steps:
-      # 1️⃣ Скачиваем код репозитория
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      # 2️⃣ Поднимаем SSH-агент с приватным ключом
-      - name: Set up SSH
+      # 1. Сборка проекта (если вы используете Gradle)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Build with Gradle
+        uses: gradle/actions/setup-gradle@v3
+      - run: chmod +x gradlew # Убедитесь, что скрипт исполняемый
+      - run: ./gradlew clean build -x test
+
+      # 2. Настройка SSH-доступа
+      - name: Set up SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
-      # 3️⃣ Подключаемся к серверу и выполняем деплой
-      - name: Deploy to VPS
+      # 3. Деплой и перезапуск
+      - name: Deploy to Server and Restart Service
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            # Переходим в папку проекта или создаём её
-            cd ~/project || mkdir -p ~/project
-
-            # Клонируем репозиторий, если ещё нет .git, иначе делаем pull
-            if [ ! -d ".git" ]; then
-              git clone https://github.com/Elzat-developer/altayboots.git .
-            else
-              git pull origin main
-            fi
-
-            # Делаем gradlew исполняемым
-            chmod +x gradlew
-
-
-            # Перезапускаем Spring Boot приложение через systemd
-            sudo systemctl restart altayboots.service
-          EOF
+          # 3.1. Убеждаемся, что хост добавлен (важно для первого раза)
+          ssh-keyscan ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          
+          # 3.2. Передача JAR-файла на сервер
+          rsync -avz \
+            -e "ssh -o StrictHostKeyChecking=no" \
+            ./build/libs/altayboots-0.0.1-SNAPSHOT.jar \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/home/${{ secrets.SERVER_USER }}/project/build/libs/
+          
+          # 3.3. Удаленное выполнение команд: остановка, очистка, запуск
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+            echo 'Deploying and restarting service...'
+            # 🛑 Здесь должно быть имя вашей systemd-службы!
+            sudo systemctl stop altayboots
+            # Очистка старых логов или других ресурсов (по желанию)
+            # Запуск новой версии
+            sudo systemctl start altayboots
+            echo 'Deployment complete.'"
