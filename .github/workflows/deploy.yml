@@ -37,8 +37,6 @@ jobs:
             # Делаем gradlew исполняемым
             chmod +x gradlew
 
-            # Собираем проект без тестов
-            ./gradlew build -x test
 
             # Перезапускаем Spring Boot приложение через systemd
             sudo systemctl restart altayboots.service
