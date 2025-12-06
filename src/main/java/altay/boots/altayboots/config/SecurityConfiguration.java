@@ -79,11 +79,19 @@ public class SecurityConfiguration {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 //        configuration.setAllowedOrigins(List.of("*")); // Разрешаем все домены, лучше потом ограничить
+        // 1. РАЗРЕШЕННЫЕ ИСТОЧНИКИ (Allowed Origins)
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000",     // фронт из IDE
-                "http://127.0.0.1:3000",    // фронт из Docker, иногда использует этот адрес
-                "http://192.168.1.110:3000", // 🔥 твой реальный IP, если фронт заходит по сети
-                "http://127.0.0.1:5500"
+                // VERCEL PRODUCTION FRONTEND
+                "https://altay-boots-frontend.vercel.app", // Ваш фронтенд на HTTPS
+
+                // LOCAL DEVELOPMENT (Рекомендуется использовать HTTPS, если возможно)
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://192.168.1.110:3000",
+
+                // Прочие локальные хосты
+                "http://127.0.0.1:5500",
+                "http://localhost:8080" // Для Swagger UI на самом сервере
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of(
