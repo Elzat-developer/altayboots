@@ -1,32 +1,45 @@
-name: Deploy to VPS
+name: Deploy AltayBoots
 
 on:
   push:
     branches:
-      - main
+      - main  # деплой при пуше в main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Скачиваем код репозитория
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2️⃣ Поднимаем SSH-агент с приватным ключом
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
-      - name: Deploy to server
+      # 3️⃣ Подключаемся к серверу и выполняем деплой
+      - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+            # Переходим в папку проекта или создаём её
             cd ~/project || mkdir -p ~/project
+
+            # Клонируем репозиторий если ещё нет .git
             if [ ! -d ".git" ]; then
-              git clone https://github.com/твой-username/твой-repo.git .
+              git clone https://github.com/Elzat-developer/altayboots.git .
             else
               git pull origin main
             fi
+
+            # Делаем gradlew исполняемым
+            chmod +x gradlew
+
+            # Собираем проект
             ./gradlew build
-            # systemctl restart my-app.service
+
+            # Перезапускаем сервис (если есть systemd сервис)
+            # systemctl restart altayboots.service
           EOF
