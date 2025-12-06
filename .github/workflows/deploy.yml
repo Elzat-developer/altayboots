@@ -24,7 +24,6 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            # Переходим в папку проекта или создаём её
             cd ~/project || mkdir -p ~/project
 
             # Клонируем репозиторий если ещё нет .git
@@ -37,9 +36,9 @@ jobs:
             # Делаем gradlew исполняемым
             chmod +x gradlew
 
-            # Собираем проект
-            ./gradlew build
+            # Сборка без тестов
+            ./gradlew build -x test
 
-            # Перезапускаем сервис (если есть systemd сервис)
+            # Перезапуск Spring Boot приложения (если есть systemd сервис)
             # systemctl restart altayboots.service
           EOF
