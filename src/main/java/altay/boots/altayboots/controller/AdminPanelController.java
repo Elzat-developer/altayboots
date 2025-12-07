@@ -50,7 +50,7 @@ public class AdminPanelController {
 
     @Operation(summary = "Получить список каталогов")
     @GetMapping("/catalogs")
-    public ResponseEntity<List<CreateCatalog>> getCatalogs() {
+    public ResponseEntity<List<GetCatalog>> getCatalogs() {
         return ResponseEntity.ok(adminService.getCatalogs());
     }
 

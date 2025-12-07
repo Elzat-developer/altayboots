@@ -92,6 +92,7 @@ public class AdminServiceImpl implements AdminService {
                 .toList();
 
         return new GetProduct(
+                product.getId(),
                 product.getName(),
                 product.getDescription(),
                 product.getText(),
@@ -163,7 +164,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public List<CreateCatalog> getCatalogs() {
+    public List<GetCatalog> getCatalogs() {
         List<Catalog> catalogs = catalogRepo.findAll();
         return catalogs.stream()
                 .map(this::toDtoCatalog)
@@ -228,6 +229,7 @@ public class AdminServiceImpl implements AdminService {
     public CompanyDescription getCompany() {
         Company company = companyRepo.findById(1);
         return new CompanyDescription(
+                company.getId(),
                 company.getName(),
                 company.getText(),
                 company.getPhotoURL(),
@@ -315,6 +317,7 @@ public class AdminServiceImpl implements AdminService {
     public GetPromotion getPromotion(int promotionId) {
         Promotion promotion = promotionRepo.findById(promotionId);
         return new GetPromotion(
+                promotion.getId(),
                 promotion.getName(),
                 promotion.getDescription(),
                 promotion.getPhotos()
@@ -472,6 +475,7 @@ public class AdminServiceImpl implements AdminService {
 
     private GetPromotion toDtoPromotion(Promotion promotion) {
         return new GetPromotion(
+                promotion.getId(),
                 promotion.getName(),
                 promotion.getDescription(),
                 promotion.getPhotos()
@@ -535,14 +539,16 @@ public class AdminServiceImpl implements AdminService {
         log.info("📸 Фото успешно сжато и сохранено: {}", outputPath);
     }
 
-    private CreateCatalog toDtoCatalog(Catalog catalog) {
-        return new CreateCatalog(
+    private GetCatalog toDtoCatalog(Catalog catalog) {
+        return new GetCatalog(
+                catalog.getId(),
                 catalog.getName()
         );
     }
 
     private GetProduct toDtoProduct(Product product) {
         return new GetProduct(
+                product.getId(),
                 product.getName(),
                 product.getDescription(),
                 product.getText(),

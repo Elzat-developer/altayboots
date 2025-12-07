@@ -6,6 +6,8 @@ import java.util.List;
 
 @Schema(description = "Информация об акции")
 public record GetPromotion(
+        @Schema(description = "Id акции", example = "1")
+        int promotion_id,
         @Schema(description = "Название акции", example = "Черная пятница")
         String name,
 

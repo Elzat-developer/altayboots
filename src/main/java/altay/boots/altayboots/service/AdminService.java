@@ -18,7 +18,7 @@ public interface AdminService {
 
     void createCatalog(CreateCatalog createCatalog);
 
-    List<CreateCatalog> getCatalogs();
+    List<GetCatalog> getCatalogs();
 
     void editCatalog(int catalogId, CreateCatalog catalog);
 

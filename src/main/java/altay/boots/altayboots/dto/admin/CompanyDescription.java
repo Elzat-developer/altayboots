@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Описание компании")
 public record CompanyDescription(
+        @Schema(description = "Id компании", example = "1")
+        int company_id,
         @Schema(description = "Название компании", example = "Kargaly Store")
         String name,
 
