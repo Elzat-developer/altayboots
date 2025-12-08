@@ -33,6 +33,10 @@ public class AdminServiceImpl implements AdminService {
     private final CompanyRepo companyRepo;
     private final PromotionRepo promotionRepo;
     private final OrderRepo orderRepo;
+
+    // --- КОНСТАНТА ДЛЯ КОРНЕВОЙ ПАПКИ ЗАГРУЗКИ ---
+    private static final String UPLOAD_ROOT_PATH = "C:/uploads";
+
     @Override
     public void createProduct(CreateProduct createProduct,List<MultipartFile> photos) {
         Product product = new Product();
@@ -47,7 +51,8 @@ public class AdminServiceImpl implements AdminService {
 
         productRepo.save(product);
 
-        Path uploadDir = Paths.get("C:/uploads/products");
+        final String subDirectory = "products";
+        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
@@ -59,10 +64,11 @@ public class AdminServiceImpl implements AdminService {
             for (MultipartFile file : photos) {
 
                 if (!file.isEmpty()) {
-                    String photoPath = processPhoto(file, uploadDir);
+                    // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
+                    String photoURL = processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(photoPath);
+                    photo.setPhotoURL(photoURL);
                     photo.setProduct(product);
 
                     product.getPhotos().add(photo);
@@ -123,7 +129,8 @@ public class AdminServiceImpl implements AdminService {
         if (editProduct.oldPrice() != null)
             product.setOldPrice(editProduct.oldPrice());
 
-        Path uploadDir = Paths.get("C:/uploads/products");
+        final String subDirectory = "products";
+        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
@@ -136,10 +143,11 @@ public class AdminServiceImpl implements AdminService {
 
             for (MultipartFile file : photos) {
                 if (!file.isEmpty()) {
-                    String photoPath = processPhoto(file, uploadDir);
+                    // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
+                    String photoURL = processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(photoPath);
+                    photo.setPhotoURL(photoURL);
                     photo.setProduct(product);
 
                     product.getPhotos().add(photo);
@@ -205,7 +213,8 @@ public class AdminServiceImpl implements AdminService {
         company.setName(createCompanyDescription.name());
         company.setText(createCompanyDescription.text());
 
-        Path uploadDir = Paths.get("C:/uploads/company");
+        final String subDirectory = "company";
+        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
@@ -215,9 +224,10 @@ public class AdminServiceImpl implements AdminService {
 
         // 📷 Фото
         if (photo != null && !photo.isEmpty()) {
-            String photoPath = processPhoto(photo, uploadDir);
-            company.setPhotoURL(photoPath);
-            log.info("✅ Фото успешно сохранено: {}", photoPath);
+            // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
+            String photoURL = processPhotoAndReturnURL(photo, uploadDir, subDirectory);
+            company.setPhotoURL(photoURL);
+            log.info("✅ Фото успешно сохранено: {}", photoURL);
         }
 
         company.setBase(createCompanyDescription.base());
@@ -246,7 +256,8 @@ public class AdminServiceImpl implements AdminService {
         company.setText(companyDescription.text());
 
 
-        Path uploadDir = Paths.get("C:/uploads/company");
+        final String subDirectory = "company";
+        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
@@ -256,9 +267,10 @@ public class AdminServiceImpl implements AdminService {
 
         // 📷 Фото
         if (photo != null && !photo.isEmpty()) {
-            String photoPath = processPhoto(photo, uploadDir);
-            company.setPhotoURL(photoPath);
-            log.info("✅ Фото успешно сохранено: {}", photoPath);
+            // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
+            String photoURL = processPhotoAndReturnURL(photo, uploadDir, subDirectory);
+            company.setPhotoURL(photoURL);
+            log.info("✅ Фото успешно сохранено: {}", photoURL);
         }
 
         company.setBase(companyDescription.base());
@@ -280,7 +292,8 @@ public class AdminServiceImpl implements AdminService {
         promotion.setStartDate(createPromotion.startDate());
         promotion.setEndDate(createPromotion.endDate());
 
-        Path uploadDir = Paths.get("C:/uploads/promotions");
+        final String subDirectory = "promotions";
+        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
@@ -292,10 +305,11 @@ public class AdminServiceImpl implements AdminService {
             for (MultipartFile file : photos) {
 
                 if (!file.isEmpty()) {
-                    String photoPath = processPhoto(file, uploadDir);
+                    // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
+                    String photoURL = processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(photoPath);
+                    photo.setPhotoURL(photoURL);
                     photo.setProduct(product);
 
                     product.getPhotos().add(photo);
@@ -355,7 +369,8 @@ public class AdminServiceImpl implements AdminService {
         if (editPromotion.endDate() != null)
             promotion.setEndDate(editPromotion.endDate());
 
-        Path uploadDir = Paths.get("C:/uploads/products");
+        final String subDirectory = "promotions";
+        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
             Files.createDirectories(uploadDir);
         } catch (IOException e) {
@@ -368,10 +383,11 @@ public class AdminServiceImpl implements AdminService {
 
             for (MultipartFile file : photos) {
                 if (!file.isEmpty()) {
-                    String photoPath = processPhoto(file, uploadDir);
+                    // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
+                    String photoURL = processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(photoPath);
+                    photo.setPhotoURL(photoURL);
                     photo.setPromotion(promotion);
 
                     promotion.getPhotos().add(photo);
@@ -385,6 +401,69 @@ public class AdminServiceImpl implements AdminService {
     public void deletePromotion(Integer promotionId) {
         promotionRepo.deleteById(promotionId);
     }
+
+    // --- МЕТОДЫ ОБРАБОТКИ ФОТО ---
+
+    /**
+     * Сохраняет фото на диск и возвращает URL-путь для базы данных.
+     * @param photo Файл, полученный из запроса
+     * @param uploadDir Локальный путь для сохранения файла (C:/uploads/...)
+     * @param subDirectory Имя подпапки (например, "products", "company")
+     * @return Относительный URL-путь (например, "/uploads/products/xyz.jpg")
+     */
+    private String processPhotoAndReturnURL(MultipartFile photo, Path uploadDir, String subDirectory) {
+        validateFileSize(photo, 10);
+        String fileName = UUID.randomUUID() + "_" + photo.getOriginalFilename();
+        Path filePath = uploadDir.resolve(fileName);
+        try {
+            compressAndSaveImage(photo, filePath);
+
+            // 🔥 ВОЗВРАЩАЕМ URL-ПУТЬ, КОТОРЫЙ БУДЕТ ИСПОЛЬЗОВАТЬ ФРОНТЕНД
+            return "/uploads/" + subDirectory + "/" + fileName;
+        } catch (IOException e) {
+            log.error("Ошибка при обработке фото '{}': {}", photo.getOriginalFilename(), e.getMessage(), e);
+            throw new RuntimeException("Ошибка при обработке фото", e);
+        }
+    }
+
+    private void validateFileSize(MultipartFile file, int maxSizeMb) {
+        long maxSizeBytes = maxSizeMb * 1024L * 1024L;
+        if (file.getSize() > maxSizeBytes) {
+            log.warn("Файл '{}' превышает допустимый размер {} МБ ({} байт)",
+                    file.getOriginalFilename(), maxSizeMb, file.getSize());
+            throw new IllegalArgumentException("Размер файла превышает " + maxSizeMb + " МБ");
+        }
+    }
+
+    private void compressAndSaveImage(MultipartFile imageFile, Path outputPath) throws IOException {
+        BufferedImage image = ImageIO.read(imageFile.getInputStream());
+        if (image == null) {
+            throw new IllegalArgumentException("Неверный формат изображения");
+        }
+
+        try (OutputStream os = Files.newOutputStream(outputPath);
+             ImageOutputStream ios = ImageIO.createImageOutputStream(os)) {
+
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+            if (!writers.hasNext()) throw new IllegalStateException("JPEG writer не найден");
+
+            ImageWriter writer = writers.next();
+            writer.setOutput(ios);
+
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            if (param.canWriteCompressed()) {
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                param.setCompressionQuality(0.6f); // 60% качества
+            }
+
+            writer.write(null, new IIOImage(image, null, null), param);
+            writer.dispose();
+        }
+
+        log.info("📸 Фото успешно сжато и сохранено: {}", outputPath);
+    }
+
+    // --- МЕТОДЫ Order / toDto / Catalog ---
 
     @Override
     public List<GetAdminOrderSimple> getOrders() {
@@ -489,54 +568,6 @@ public class AdminServiceImpl implements AdminService {
                 promotion.getStartDate(),
                 promotion.getEndDate()
         );
-    }
-
-    private String processPhoto(MultipartFile photo, Path uploadDir) {
-        validateFileSize(photo, 10);
-        String fileName = UUID.randomUUID() + "_" + photo.getOriginalFilename();
-        Path filePath = uploadDir.resolve(fileName);
-        try {
-            compressAndSaveImage(photo, filePath);
-            return filePath.toString();
-        } catch (IOException e) {
-            log.error("Ошибка при обработке фото '{}': {}", photo.getOriginalFilename(), e.getMessage(), e);
-            throw new RuntimeException("Ошибка при обработке фото", e);
-        }
-    }
-    private void validateFileSize(MultipartFile file, int maxSizeMb) {
-        long maxSizeBytes = maxSizeMb * 1024L * 1024L;
-        if (file.getSize() > maxSizeBytes) {
-            log.warn("Файл '{}' превышает допустимый размер {} МБ ({} байт)",
-                    file.getOriginalFilename(), maxSizeMb, file.getSize());
-            throw new IllegalArgumentException("Размер файла превышает " + maxSizeMb + " МБ");
-        }
-    }
-    private void compressAndSaveImage(MultipartFile imageFile, Path outputPath) throws IOException {
-        BufferedImage image = ImageIO.read(imageFile.getInputStream());
-        if (image == null) {
-            throw new IllegalArgumentException("Неверный формат изображения");
-        }
-
-        try (OutputStream os = Files.newOutputStream(outputPath);
-             ImageOutputStream ios = ImageIO.createImageOutputStream(os)) {
-
-            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
-            if (!writers.hasNext()) throw new IllegalStateException("JPEG writer не найден");
-
-            ImageWriter writer = writers.next();
-            writer.setOutput(ios);
-
-            ImageWriteParam param = writer.getDefaultWriteParam();
-            if (param.canWriteCompressed()) {
-                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                param.setCompressionQuality(0.6f); // 60% качества
-            }
-
-            writer.write(null, new IIOImage(image, null, null), param);
-            writer.dispose();
-        }
-
-        log.info("📸 Фото успешно сжато и сохранено: {}", outputPath);
     }
 
     private GetCatalog toDtoCatalog(Catalog catalog) {

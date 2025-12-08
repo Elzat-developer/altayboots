@@ -9,9 +9,6 @@ import java.util.List;
 @Schema(description = "Информация о заказе")
 public record GetOrder(
 
-        @Schema(description = "Имя покупателя", example = "Азамат")
-        String name,
-
         @Schema(description = "Дата создания заказа", example = "2025-10-02T15:45:00")
         LocalDateTime orderStartDate,
 

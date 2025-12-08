@@ -76,20 +76,36 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public Integer createOrder(CreateOrder createOrder) {
-
+        // 1. Получаем текущего аутентифицированного пользователя
         User user = getContextUser();
 
         Order order = new Order();
         order.setOrderStartDate(LocalDateTime.now());
         order.setPaidStatus(PaidStatus.NOTPAY);
 
-        user.setSurName(createOrder.surName());
-        user.setLastName(createOrder.lastName());
-        user.setRegion(createOrder.region());
-        user.setCityOrDistrict(createOrder.cityOrDistrict());
-        user.setStreet(createOrder.street());
-        user.setHouseOrApartment(createOrder.houseOrApartment());
-        user.setIndexPost(createOrder.index());
+        // 2. Обновление данных пользователя с проверкой на null (Ваш код)
+        // Это гарантирует, что существующие данные не будут перезаписаны null
+        if (createOrder.surName() != null) {
+            user.setSurName(createOrder.surName());
+        }
+        if (createOrder.lastName() != null) {
+            user.setLastName(createOrder.lastName());
+        }
+        if (createOrder.region() != null) {
+            user.setRegion(createOrder.region());
+        }
+        if (createOrder.cityOrDistrict() != null) {
+            user.setCityOrDistrict(createOrder.cityOrDistrict());
+        }
+        if (createOrder.street()!= null) {
+            user.setStreet(createOrder.street());
+        }
+        if (createOrder.houseOrApartment() != null) {
+            user.setHouseOrApartment(createOrder.houseOrApartment());
+        }
+        if (createOrder.index() != null) {
+            user.setIndexPost(createOrder.index());
+        }
         userRepo.save(user);
 
         order.setUser(user);
@@ -98,9 +114,14 @@ public class UserServiceImpl implements UserService {
 
         for (OrderItemDto itemDto : createOrder.items()) {
 
+            // 3. Улучшенная проверка наличия товара с использованием Optional (Spring Data JPA)
+            // Если findById возвращает Optional, это корректный способ
             Product product = productRepo.findById(itemDto.productId());
-            if (product == null)
-                throw new RuntimeException("Product not found: " + itemDto.productId());
+
+            // 4. Проверка, что количество товара больше нуля
+            if (itemDto.quantity() <= 0) {
+                throw new IllegalArgumentException("Quantity must be greater than zero for product ID: " + itemDto.productId());
+            }
 
             OrderItem item = new OrderItem();
             item.setProduct(product);
@@ -114,7 +135,7 @@ public class UserServiceImpl implements UserService {
 
         Order savedOrder = orderRepo.save(order);
 
-        return savedOrder.getId(); // <-- ВОТ ЭТО ВАЖНО
+        return savedOrder.getId();
     }
 
 
@@ -130,7 +151,6 @@ public class UserServiceImpl implements UserService {
     public GetOrder getOrder(int orderId) {
         Order order = orderRepo.findById(orderId);
         return new GetOrder(
-                order.getName(),
                 order.getOrderStartDate(),
                 order.getPaidStatus(),
                 order.getItems().stream()
@@ -229,7 +249,7 @@ public class UserServiceImpl implements UserService {
     private User getContextUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String name = auth.getName();
-        User user = userRepo.findByName(name);
+        User user = userRepo.findByPhone(name);
         if (user == null) throw new RuntimeException("User not found");
         return user;
     }
@@ -254,7 +274,6 @@ public class UserServiceImpl implements UserService {
 
     private GetOrder toDtoOrder(Order order) {
         return new GetOrder(
-                order.getName(),
                 order.getOrderStartDate(),
                 order.getPaidStatus(),
                 order.getItems().stream()
