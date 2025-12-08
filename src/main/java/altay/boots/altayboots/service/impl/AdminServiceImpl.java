@@ -20,10 +20,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Log4j2
@@ -105,13 +102,31 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public GetProduct getProduct(int productId) {
+        // 1. Поиск продукта (предполагаем, что findById возвращает Product или бросает исключение)
         Product product = productRepo.findById(productId);
 
-        List<String> photoList = product.getPhotos()
-                .stream()
-                .map(ProductPhoto::getPhotoURL)
-                .toList();
+        // Добавьте проверку, если findById может вернуть null, чтобы избежать сбоя
+        if (product == null) {
+            throw new IllegalArgumentException("Продукт с ID " + productId + " не найден.");
+        }
 
+        // 2. Безопасное извлечение ID каталога
+        Integer catalogId = null;
+
+        // ⚠️ ПРОВЕРКА НА NULL: Если product.getCatalog() не null, мы берем его ID.
+        if (product.getCatalog() != null) {
+            catalogId = product.getCatalog().getId();
+        }
+
+        // 3. Извлечение списка фото (здесь также лучше убедиться, что getPhotos() не null)
+        List<String> photoList = product.getPhotos() != null ?
+                product.getPhotos()
+                        .stream()
+                        .map(ProductPhoto::getPhotoURL)
+                        .toList() :
+                Collections.emptyList(); // Используем Collections.emptyList() для безопасности
+
+        // 4. Возврат DTO
         return new GetProduct(
                 product.getId(),
                 product.getName(),
@@ -120,7 +135,8 @@ public class AdminServiceImpl implements AdminService {
                 product.getPrice(),
                 product.getOldPrice(),
                 photoList,
-                product.getCatalog().getId()
+                // Используем безопасно извлеченный ID каталога
+                catalogId
         );
     }
 

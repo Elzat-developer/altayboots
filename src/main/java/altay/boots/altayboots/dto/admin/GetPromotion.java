@@ -7,7 +7,7 @@ import java.util.List;
 @Schema(description = "Информация об акции")
 public record GetPromotion(
         @Schema(description = "Id акции", example = "1")
-        int promotion_id,
+        Integer promotion_id,
         @Schema(description = "Название акции", example = "Черная пятница")
         String name,
 
@@ -24,10 +24,10 @@ public record GetPromotion(
         boolean global,
 
         @Schema(description = "ID каталога", example = "1")
-        int catalogId,
+        Integer catalogId,
 
         @Schema(description = "ID продукта", example = "10")
-        int productId,
+        Integer productId,
 
         @Schema(description = "Дата начала", example = "2025-01-15")
         String startDate,

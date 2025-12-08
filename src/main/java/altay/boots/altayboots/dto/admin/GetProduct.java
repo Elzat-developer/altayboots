@@ -7,7 +7,7 @@ import java.util.List;
 @Schema(description = "Информация о продукте")
 public record GetProduct(
         @Schema(description = "Id продукта", example = "1")
-        int id,
+        Integer id,
         @Schema(description = "Название продукта", example = "Кроссовки Adidas UltraBoost")
         String name,
 
@@ -27,6 +27,6 @@ public record GetProduct(
         List<String> photos,
 
         @Schema(description = "ID каталога, к которому принадлежит продукт", example = "2")
-        int catalog_id
+        Integer catalog_id
 ) {}
 
