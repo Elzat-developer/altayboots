@@ -1,6 +1,8 @@
+// Новый DTO для EditProduct
 package altay.boots.altayboots.dto.admin;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List; // ⚠️ ДОБАВЛЯЕМ List
 
 @Schema(description = "Данные для редактирования продукта")
 public record EditProduct(
@@ -17,6 +19,9 @@ public record EditProduct(
         Integer price,
 
         @Schema(description = "Старая цена", example = "37990")
-        Integer oldPrice
-) {}
+        Integer oldPrice,
 
+        // 🚨 НОВОЕ ПОЛЕ: Список ID существующих фото, которые нужно удалить
+        @Schema(description = "Список ID фотографий продукта, которые необходимо удалить (остальные будут сохранены)")
+        List<Integer> photosToDeleteIds
+) {}
