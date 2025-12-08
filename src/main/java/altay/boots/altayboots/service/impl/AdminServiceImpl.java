@@ -258,34 +258,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void createCompanyDescription(CreateCompanyDescription createCompanyDescription, MultipartFile photo) {
-        Company company = new Company();
-        company.setName(createCompanyDescription.name());
-        company.setText(createCompanyDescription.text());
-
-        final String subDirectory = "company";
-        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            log.error("❌ Не удалось создать папку загрузки: {}", e.getMessage(), e);
-            throw new RuntimeException("Не удалось создать папку загрузки", e);
-        }
-
-        // 📷 Фото
-        if (photo != null && !photo.isEmpty()) {
-            // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
-            String photoURL = processPhotoAndReturnURL(photo, uploadDir, subDirectory);
-            company.setPhotoURL(photoURL);
-            log.info("✅ Фото успешно сохранено: {}", photoURL);
-        }
-
-        company.setBase(createCompanyDescription.base());
-        company.setCity(createCompanyDescription.city());
-        companyRepo.save(company);
-    }
-
-    @Override
     public CompanyDescription getCompany() {
         Company company = companyRepo.findById(1);
         return new CompanyDescription(

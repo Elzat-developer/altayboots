@@ -26,8 +26,6 @@ public interface AdminService {
 
     void deleteCatalog(Integer catalogId);
 
-    void createCompanyDescription(CreateCompanyDescription createCompanyDescription, MultipartFile photo);
-
     CompanyDescription getCompany();
 
     void editCompany(CreateCompanyDescription companyDescription,MultipartFile photo);

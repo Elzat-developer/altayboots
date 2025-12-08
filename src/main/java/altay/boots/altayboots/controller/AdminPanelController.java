@@ -130,17 +130,6 @@ public class AdminPanelController {
         return new ResponseEntity<>("Catalog successfully created!", HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Создать описание компании")
-    @PostMapping(value = "/create-company", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> createCompanyDescription(
-            @ModelAttribute CreateCompanyDescription createCompanyDescription,
-            @Parameter(description = "Фото компании")
-            @RequestPart("photo") MultipartFile photo
-    ) {
-        adminService.createCompanyDescription(createCompanyDescription, photo);
-        return new ResponseEntity<>("Company successfully created!", HttpStatus.CREATED);
-    }
-
     @Operation(summary = "Создать акцию")
     @PostMapping(value = "/create-promotion", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> createPromotion(
