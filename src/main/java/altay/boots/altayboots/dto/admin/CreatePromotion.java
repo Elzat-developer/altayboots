@@ -13,15 +13,6 @@ public record CreatePromotion(
         @Schema(description = "Размер скидки", example = "20")
         int percentageDiscounted,
 
-        @Schema(description = "Глобальная акция?", example = "false")
-        boolean global,
-
-        @Schema(description = "ID каталога", example = "3")
-        int catalogId,
-
-        @Schema(description = "ID продукта", example = "7")
-        int productId,
-
         @Schema(description = "Дата начала акции", example = "2025-01-01")
         String startDate,
 

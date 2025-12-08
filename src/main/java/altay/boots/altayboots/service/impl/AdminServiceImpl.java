@@ -332,38 +332,32 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void createPromotion(CreatePromotion createPromotion, List<MultipartFile> photos) {
 
-        // 1. ПРОВЕРКА КАТАЛОГА ⚠️
-        // Предполагается, что catalogRepo.findById() возвращает Catalog или null.
-        Catalog catalog = catalogRepo.findById(createPromotion.catalogId());
-
-        if (catalog == null) {
-            // 🔥 Если каталог не найден, выбрасываем исключение
-            throw new IllegalArgumentException("Каталог с ID " + createPromotion.catalogId() + " не найден. Акция не может быть создана.");
-        }
-
-        // 2. ПРОВЕРКА ПРОДУКТА ⚠️
-        // Предполагается, что productRepo.findById() возвращает Product или null.
-        Product product = productRepo.findById(createPromotion.productId());
-
-        if (product == null) {
-            // 🔥 Если продукт не найден, выбрасываем исключение
-            throw new IllegalArgumentException("Продукт с ID " + createPromotion.productId() + " не найден. Акция не может быть создана.");
-        }
-
-        // --- ИНИЦИАЛИЗАЦИЯ АКЦИИ ---
+        // --- 1. ИНИЦИАЛИЗАЦИЯ И УСТАНОВКА ОСНОВНЫХ ПОЛЕЙ АКЦИИ ---
         Promotion promotion = new Promotion();
+
+        // Установка полей, пришедших из DTO
         promotion.setName(createPromotion.name());
         promotion.setDescription(createPromotion.description());
+
+        // Используем Integer (соответствует int в сущности/DTO)
         promotion.setPercentageDiscounted(createPromotion.percentageDiscounted());
 
-        // Установка найденных объектов
-        promotion.setCatalog(catalog);
-        promotion.setProduct(product);
+        // Инициализация привязок к сущностям как null (т.к. привязка будет позже)
+        promotion.setCatalog(null);
+        promotion.setProduct(null);
+
+        // Если акция по умолчанию не глобальная, установите false
+        // Если поле global отсутствует в DTO, но обязательно в сущности:
+         promotion.setGlobal(false);
 
         promotion.setStartDate(createPromotion.startDate());
         promotion.setEndDate(createPromotion.endDate());
 
-        // --- ЛОГИКА СОХРАНЕНИЯ ФОТОГРАФИЙ ---
+        // --- 2. ПЕРВОЕ СОХРАНЕНИЕ ---
+        // Сохранение акции для получения ID, необходимого для привязки фото
+        promotionRepo.save(promotion);
+
+        // --- 3. ПОДГОТОВКА ПАПКИ И СОХРАНЕНИЕ ФОТОГРАФИЙ ---
         final String subDirectory = "promotions";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
@@ -372,33 +366,26 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("Не удалось создать папку загрузки", e);
         }
 
-        // 📷 СОХРАНЕНИЕ НЕСКОЛЬКИХ ФОТО
-        if (photos != null) {
+        if (photos != null && !photos.isEmpty()) {
             for (MultipartFile file : photos) {
-
                 if (!file.isEmpty()) {
                     // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
                     String photoURL = processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
                     photo.setPhotoURL(photoURL);
-                    photo.setProduct(product);
 
-                    // ВНИМАНИЕ: Если вы сохраняете фото, привязанные к *Продукту*,
-                    // убедитесь, что это соответствует вашей бизнес-логике.
-                    // Возможно, фото должны быть привязаны к самой *Акции* (Promotion),
-                    // а не к Продукту. Я оставил ваш исходный код.
-                    product.getPhotos().add(photo);
+                    // ⚠️ КОРРЕКТНАЯ ПРИВЯЗКА: Привязываем фото к самой АКЦИИ
+                    // (Предполагается, что у ProductPhoto есть поле setPromotion(Promotion))
+                    photo.setPromotion(promotion);
+
+                    promotion.getPhotos().add(photo);
                 }
             }
         }
 
-        // Сохранение акции
+        // 4. ПОВТОРНОЕ СОХРАНЕНИЕ (для сохранения привязанных фотографий)
         promotionRepo.save(promotion);
-
-        // Если вы добавляли фото в коллекцию product.getPhotos(), возможно,
-        // вам понадобится сохранить продукт, чтобы изменения вступили в силу:
-        // productRepo.save(product);
     }
 
     @Override
@@ -432,10 +419,49 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void editPromotion(int promotionId, EditPromotion editPromotion, List<MultipartFile> photos) {
         // 1. ПОЛУЧЕНИЕ И ПРОВЕРКА АКЦИИ
-        // Используем Optional и .orElseThrow для безопасности
+        // Предполагается, что findById возвращает Promotion или null
         Promotion promotion = promotionRepo.findById(promotionId);
 
-        // 2. ОБНОВЛЕНИЕ ТЕКСТОВЫХ ПОЛЕЙ
+        if (promotion == null) {
+            throw new IllegalArgumentException("Акция с ID " + promotionId + " не найдена.");
+        }
+
+        // --- 2. ОБНОВЛЕНИЕ СВЯЗАННЫХ СУЩНОСТЕЙ (КАТАЛОГ и ПРОДУКТ) ---
+
+        // 2.1. Обработка CatalogId
+        if (editPromotion.catalogId() != 0) {
+            // Если прислан 0 или null, сбрасываем привязку
+            if (editPromotion.catalogId() <= 0) {
+                promotion.setCatalog(null);
+            } else {
+                Catalog catalog = catalogRepo.findById(editPromotion.catalogId());
+                if (catalog == null) {
+                    throw new IllegalArgumentException("Каталог с ID " + editPromotion.catalogId() + " не найден.");
+                }
+                promotion.setCatalog(catalog);
+            }
+        }
+        // Если catalogId не прислан в DTO, старая привязка сохраняется.
+
+        // 2.2. Обработка ProductId
+        if (editPromotion.productId() != 0) {
+            // Если прислан 0 или null, сбрасываем привязку
+            if (editPromotion.productId() <= 0) {
+                promotion.setProduct(null);
+            } else {
+                Product product = productRepo.findById(editPromotion.productId());
+                if (product == null) {
+                    throw new IllegalArgumentException("Продукт с ID " + editPromotion.productId() + " не найден.");
+                }
+                promotion.setProduct(product);
+            }
+        }
+        // Если productId не прислан в DTO, старая привязка сохраняется.
+
+
+        // --- 3. ОБНОВЛЕНИЕ ТЕКСТОВЫХ ПОЛЕЙ ---
+
+        // Используйте проверку на != null, чтобы обновить поле, только если оно передано в DTO
         if (editPromotion.name() != null)
             promotion.setName(editPromotion.name());
 
@@ -454,7 +480,8 @@ public class AdminServiceImpl implements AdminService {
         if (editPromotion.endDate() != null)
             promotion.setEndDate(editPromotion.endDate());
 
-        // 3. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
+
+        // 4. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
         final String subDirectory = "promotions";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
@@ -463,47 +490,42 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("Не удалось создать папку загрузки", e);
         }
 
-        // --- 4. ОБРАБОТКА ИЗМЕНЕНИЙ ФОТОГРАФИЙ ---
+        // --- 5. ОБРАБОТКА ИЗМЕНЕНИЙ ФОТОГРАФИЙ ---
 
-        // 4.1. ИЗБИРАТЕЛЬНОЕ УДАЛЕНИЕ СТАРЫХ ФОТОГРАФИЙ (те, что пришли в photosToDeleteIds)
+        // 5.1. ИЗБИРАТЕЛЬНОЕ УДАЛЕНИЕ СТАРЫХ ФОТОГРАФИЙ
         if (editPromotion.photosToDeleteIds() != null && !editPromotion.photosToDeleteIds().isEmpty()) {
 
             List<Integer> idsToDelete = editPromotion.photosToDeleteIds();
 
-            // Используем Iterator для безопасного удаления элементов из коллекции при переборе
+            // Используем removeIf для удаления элементов из коллекции и очистки файлов
             promotion.getPhotos().removeIf(photo -> {
                 if (idsToDelete.contains(photo.getId())) {
-                    // 3. УДАЛЕНИЕ ФАЙЛОВ С ДИСКА ИЗ БД
-                    // Пример: deleteFileFromDisk(photo.getPhotoURL());
-                    // Пример: productPhotoRepo.delete(photo);
-                    return true; // Удалить элемент из коллекции promotion.getPhotos()
+                    // Здесь должна быть логика удаления файла с диска:
+                    // deleteFileFromDisk(photo.getPhotoURL());
+                    // Если у вас настроен orphanRemoval=true, JPA удалит объект ProductPhoto из БД.
+                    return true;
                 }
-                return false; // Оставить элемент
+                return false;
             });
-
-            // Примечание: Если у вас правильно настроены отношения @OneToMany с orphanRemoval=true,
-            // JPA сам удалит из БД объекты, которые были удалены из коллекции.
         }
 
-        // 4.2. ДОБАВЛЕНИЕ НОВЫХ ФОТОГРАФИЙ (добавляются к оставшимся/сохраненным фото)
-        // ⚠️ В этом блоке мы НЕ делаем promotion.getPhotos().clear();
+        // 5.2. ДОБАВЛЕНИЕ НОВЫХ ФОТОГРАФИЙ
+        // Новые фото добавляются к оставшимся старым фото в коллекции promotion.getPhotos()
         if (photos != null && !photos.isEmpty()) {
             for (MultipartFile file : photos) {
                 if (!file.isEmpty()) {
-                    // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
                     String photoURL = processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
                     photo.setPhotoURL(photoURL);
                     photo.setPromotion(promotion);
 
-                    // Просто добавляем новую фотографию в коллекцию
                     promotion.getPhotos().add(photo);
                 }
             }
         }
 
-        // 5. СОХРАНЕНИЕ АКЦИИ (со всеми изменениями)
+        // 6. СОХРАНЕНИЕ АКЦИИ (со всеми изменениями)
         promotionRepo.save(promotion);
     }
 
