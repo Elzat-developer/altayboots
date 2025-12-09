@@ -1,13 +1,8 @@
 package altay.boots.altayboots.controller;
 
-import altay.boots.altayboots.dto.admin.CompanyDescription;
 import altay.boots.altayboots.dto.user.*;
-import altay.boots.altayboots.service.AdminService;
 import altay.boots.altayboots.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,39 +21,6 @@ import java.util.Map;
 public class UserPanelController {
 
     private final UserService userService;
-    private final AdminService adminService;
-
-    @GetMapping("/products")
-    @Operation(
-            summary = "Получить список продуктов",
-            description = "Возвращает список товаров для пользовательской витрины"
-    )
-    @ApiResponse(
-            responseCode = "200",
-            description = "Список товаров успешно получен",
-            content = @Content(schema = @Schema(implementation = GetProductUser.class))
-    )
-    public ResponseEntity<List<GetProductUser>> getProducts() {
-        return ResponseEntity.ok(userService.getProducts());
-    }
-
-    @GetMapping("/product/{product_id}")
-    @Operation(
-            summary = "Получить один продукт",
-            description = "Возвращает данные одного товара по его ID"
-    )
-    public ResponseEntity<GetProductUser> getProducts(@PathVariable Integer product_id) {
-        return ResponseEntity.ok(userService.getProduct(product_id));
-    }
-
-    @GetMapping("/company")
-    @Operation(
-            summary = "Получить данные о компании",
-            description = "Возвращает описание компании"
-    )
-    public ResponseEntity<CompanyDescription> getCompany() {
-        return ResponseEntity.ok(adminService.getCompany());
-    }
 
     @GetMapping("/orders/{user_id}")
     @Operation(
