@@ -1,17 +1,17 @@
 package altay.boots.altayboots.controller;
 
-import altay.boots.altayboots.dto.admin.CompanyDescription;
+import altay.boots.altayboots.dto.admin.*;
 import altay.boots.altayboots.dto.auth.JwtAuthenticationResponce;
 import altay.boots.altayboots.dto.auth.SignInRequest;
 import altay.boots.altayboots.dto.auth.SignUpRequest;
-import altay.boots.altayboots.dto.user.GetProductUser;
 import altay.boots.altayboots.service.AdminService;
 import altay.boots.altayboots.service.AuthenticationService;
-import altay.boots.altayboots.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,7 +28,6 @@ public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
     private final AdminService adminService;
-    private final UserService userService;
 
     @PostMapping("/sign-in")
     @Operation(
@@ -71,27 +70,25 @@ public class AuthenticationController {
         authenticationService.signUp(signUpRequest);
         return new ResponseEntity<>("Аккаунт успешно сохранен!", HttpStatus.CREATED);
     }
+
+    @Operation(summary = "Получить список продуктов")
+    @ApiResponse(responseCode = "200", description = "Список продуктов успешно получен")
     @GetMapping("/products")
-    @Operation(
-            summary = "Получить список продуктов",
-            description = "Возвращает список товаров для пользовательской витрины"
-    )
-    @ApiResponse(
-            responseCode = "200",
-            description = "Список товаров успешно получен",
-            content = @Content(schema = @Schema(implementation = GetProductUser.class))
-    )
-    public ResponseEntity<List<GetProductUser>> getProducts() {
-        return ResponseEntity.ok(userService.getProducts());
+    public ResponseEntity<List<GetProduct>> getProducts() {
+        return ResponseEntity.ok(adminService.getProducts());
     }
 
+    @Operation(summary = "Получить продукт по ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Продукт найден"),
+            @ApiResponse(responseCode = "404", description = "Продукт не найден")
+    })
     @GetMapping("/product/{product_id}")
-    @Operation(
-            summary = "Получить один продукт",
-            description = "Возвращает данные одного товара по его ID"
-    )
-    public ResponseEntity<GetProductUser> getProducts(@PathVariable Integer product_id) {
-        return ResponseEntity.ok(userService.getProduct(product_id));
+    public ResponseEntity<GetProduct> getProducts(
+            @Parameter(description = "ID продукта", example = "1")
+            @PathVariable Integer product_id
+    ) {
+        return ResponseEntity.ok(adminService.getProduct(product_id));
     }
     @GetMapping("/company")
     @Operation(
@@ -100,5 +97,38 @@ public class AuthenticationController {
     )
     public ResponseEntity<CompanyDescription> getCompany() {
         return ResponseEntity.ok(adminService.getCompany());
+    }
+
+    @Operation(summary = "Получить список каталогов")
+    @GetMapping("/catalogs")
+    public ResponseEntity<List<GetCatalog>> getCatalogs() {
+        return ResponseEntity.ok(adminService.getCatalogs());
+    }
+
+    @Operation(summary = "Получить продукты каталога по ID")
+    @GetMapping("/catalog/{catalog_id}")
+    public ResponseEntity<List<GetProduct>> getCatalog(
+            @Parameter(description = "ID каталога", example = "1")
+            @PathVariable Integer catalog_id
+    ) {
+        return ResponseEntity.ok(adminService.getProductsCatalog(catalog_id));
+    }
+    @Operation(summary = "Получить список акций")
+    @GetMapping("/promotions")
+    public ResponseEntity<List<GetPromotion>> getPromotions() {
+        return ResponseEntity.ok(adminService.getPromotions());
+    }
+    @Operation(summary = "Получить акцию по ID")
+    @GetMapping("/promotion/{promotion_id}")
+    public ResponseEntity<GetPromotion> getPromotions(
+            @Parameter(description = "ID акции", example = "1")
+            @PathVariable Integer promotion_id
+    ) {
+        return ResponseEntity.ok(adminService.getPromotion(promotion_id));
+    }
+    @Operation(summary = "Получить список акций, но его только первое фото и id")
+    @GetMapping("/promotions-first-image")
+    public ResponseEntity<List<GetPromotionFirstImage>> getPromotionFirstImage(){
+        return ResponseEntity.ok(adminService.getPromotionFirstImage());
     }
 }

@@ -4,8 +4,6 @@ import altay.boots.altayboots.dto.admin.*;
 import altay.boots.altayboots.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,72 +21,6 @@ import java.util.List;
 public class AdminPanelController {
 
     private final AdminService adminService;
-
-    // --------------------- PRODUCTS ------------------------
-
-    @Operation(summary = "Получить список продуктов")
-    @ApiResponse(responseCode = "200", description = "Список продуктов успешно получен")
-    @GetMapping("/products")
-    public ResponseEntity<List<GetProduct>> getProducts() {
-        return ResponseEntity.ok(adminService.getProducts());
-    }
-
-    @Operation(summary = "Получить продукт по ID")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Продукт найден"),
-            @ApiResponse(responseCode = "404", description = "Продукт не найден")
-    })
-    @GetMapping("/product/{product_id}")
-    public ResponseEntity<GetProduct> getProducts(
-            @Parameter(description = "ID продукта", example = "1")
-            @PathVariable Integer product_id
-    ) {
-        return ResponseEntity.ok(adminService.getProduct(product_id));
-    }
-
-    // --------------------- CATALOGS ------------------------
-
-    @Operation(summary = "Получить список каталогов")
-    @GetMapping("/catalogs")
-    public ResponseEntity<List<GetCatalog>> getCatalogs() {
-        return ResponseEntity.ok(adminService.getCatalogs());
-    }
-
-    @Operation(summary = "Получить продукты каталога по ID")
-    @GetMapping("/catalog/{catalog_id}")
-    public ResponseEntity<List<GetProduct>> getCatalog(
-            @Parameter(description = "ID каталога", example = "1")
-            @PathVariable Integer catalog_id
-    ) {
-        return ResponseEntity.ok(adminService.getProductsCatalog(catalog_id));
-    }
-
-    // --------------------- COMPANY ------------------------
-
-    @Operation(summary = "Получить описание компании")
-    @GetMapping("/company")
-    public ResponseEntity<CompanyDescription> getCompany() {
-        return ResponseEntity.ok(adminService.getCompany());
-    }
-
-    // --------------------- PROMOTIONS ------------------------
-
-    @Operation(summary = "Получить список акций")
-    @GetMapping("/promotions")
-    public ResponseEntity<List<GetPromotion>> getPromotions() {
-        return ResponseEntity.ok(adminService.getPromotions());
-    }
-
-    @Operation(summary = "Получить акцию по ID")
-    @GetMapping("/promotion/{promotion_id}")
-    public ResponseEntity<GetPromotion> getPromotions(
-            @Parameter(description = "ID акции", example = "1")
-            @PathVariable Integer promotion_id
-    ) {
-        return ResponseEntity.ok(adminService.getPromotion(promotion_id));
-    }
-
-    // --------------------- ORDERS ------------------------
 
     @Operation(summary = "Получить список заказов")
     @GetMapping("/orders")

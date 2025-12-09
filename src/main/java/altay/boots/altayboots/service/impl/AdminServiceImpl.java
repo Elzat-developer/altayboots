@@ -2,6 +2,7 @@ package altay.boots.altayboots.service.impl;
 
 import altay.boots.altayboots.dto.admin.*;
 import altay.boots.altayboots.model.entity.*;
+import altay.boots.altayboots.query.PromotionFirstImageProjection;
 import altay.boots.altayboots.repository.*;
 import altay.boots.altayboots.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -645,6 +646,19 @@ public class AdminServiceImpl implements AdminService {
         orderRepo.deleteById(orderId);
     }
 
+    @Override
+    public List<GetPromotionFirstImage> getPromotionFirstImage() {
+        // 1. Получаем список интерфейсов проекции
+        List<PromotionFirstImageProjection> projections = promotionRepo.findPromotionsWithFirstPhotoNative();
+
+        // 2. Преобразуем его в целевой DTO
+        return projections.stream()
+                .map(p -> new GetPromotionFirstImage(
+                        p.getPromotionId(),       // <- Используем геттер проекции
+                        p.getPromotionImages()    // <- Используем геттер проекции
+                ))
+                .toList();
+    }
 
     private GetAdminOrderSimple toDtoOrders(Order order) {
         return new GetAdminOrderSimple(

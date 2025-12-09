@@ -40,6 +40,7 @@ public class UserServiceImpl implements UserService {
 
     private GetProductUser toDtoProduct(Product product) {
         return new GetProductUser(
+                product.getId(),
                 product.getName(),
                 product.getDescription(),
                 product.getText(),
@@ -63,6 +64,7 @@ public class UserServiceImpl implements UserService {
                 .toList();
 
         return new GetProductUser(
+                product.getId(),
                 product.getName(),
                 product.getDescription(),
                 product.getText(),

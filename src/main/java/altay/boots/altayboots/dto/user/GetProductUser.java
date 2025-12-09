@@ -6,6 +6,8 @@ import java.util.List;
 
 @Schema(description = "Товар для отображения пользователю")
 public record GetProductUser(
+        @Schema(description = "Id продукта", example = "55")
+        Integer product_id,
 
         @Schema(description = "Название товара", example = "Пальто зимнее")
         String name,

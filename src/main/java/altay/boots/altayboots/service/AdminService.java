@@ -47,4 +47,6 @@ public interface AdminService {
     void editOrder(Integer orderId,EditOrder editOrder);
 
     void deleteOrder(Integer orderId);
+
+    List<GetPromotionFirstImage> getPromotionFirstImage();
 }
