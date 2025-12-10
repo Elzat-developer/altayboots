@@ -18,10 +18,10 @@ public record GetPromotion(
         List<String> photos,
 
         @Schema(description = "Размер скидки в процентах", example = "30")
-        int percentageDiscounted,
+        Integer percentageDiscounted,
 
         @Schema(description = "Глобальная акция?", example = "true")
-        boolean global,
+        Boolean global,
 
         @Schema(description = "ID каталога", example = "1")
         Integer catalogId,

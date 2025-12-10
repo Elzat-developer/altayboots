@@ -16,10 +16,10 @@ public record EditPromotion(
         Integer percentageDiscounted,
 
         @Schema(description = "ID каталога", example = "3")
-        int catalogId,
+        Integer catalogId,
 
         @Schema(description = "ID продукта", example = "7")
-        int productId,
+        Integer productId,
         @Schema(description = "Глобальная акция?", example = "true")
         Boolean global,
 

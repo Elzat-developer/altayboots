@@ -143,9 +143,16 @@ public class AdminServiceImpl implements AdminService {
 
 
     @Override
-    public void editProduct(int product_id, EditProduct editProduct,List<MultipartFile> photos) {
+    public void editProduct(int product_id, EditProduct editProduct, List<MultipartFile> photos) {
+        // 1. ПОЛУЧЕНИЕ ПРОДУКТА
+        // Предполагаем, что findById возвращает Product или null
         Product product = productRepo.findById(product_id);
 
+        if (product == null) {
+            throw new IllegalArgumentException("Продукт с ID " + product_id + " не найден.");
+        }
+
+        // 2. ОБНОВЛЕНИЕ ТЕКСТОВЫХ ПОЛЕЙ
         if (editProduct.name() != null)
             product.setName(editProduct.name());
 
@@ -161,6 +168,7 @@ public class AdminServiceImpl implements AdminService {
         if (editProduct.oldPrice() != null)
             product.setOldPrice(editProduct.oldPrice());
 
+        // 3. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
         final String subDirectory = "products";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
@@ -168,30 +176,25 @@ public class AdminServiceImpl implements AdminService {
         } catch (IOException e) {
             throw new RuntimeException("Не удалось создать папку загрузки", e);
         }
-        // 📌 ЛОГИКА ИЗБИРАТЕЛЬНОГО УДАЛЕНИЯ ФОТОГРАФИЙ
+
+        // 4. ЛОГИКА ИЗБИРАТЕЛЬНОГО УДАЛЕНИЯ ФОТОГРАФИЙ (ОБНОВЛЕННЫЙ БЛОК)
         if (editProduct.photosToDeleteIds() != null && !editProduct.photosToDeleteIds().isEmpty()) {
 
-            // Получаем список ID, которые нужно удалить
             List<Integer> idsToDelete = editProduct.photosToDeleteIds();
 
-            // Фильтруем коллекцию старых фото
-            List<ProductPhoto> photosToKeep = new ArrayList<>();
-            List<ProductPhoto> photosToRemove = new ArrayList<>();
+            // Используем removeIf для удаления элементов из коллекции и очистки файлов
+            product.getPhotos().removeIf(photo -> {
 
-            for (ProductPhoto photo : product.getPhotos()) {
                 if (idsToDelete.contains(photo.getId())) {
-                    photosToRemove.add(photo);
-                } else {
-                    photosToKeep.add(photo);
+                    // *** КРИТИЧЕСКИЙ ШАГ: УДАЛЕНИЕ ФАЙЛА С ДИСКА ***
+                    deleteFileFromDisk(photo.getPhotoURL());
+                    return true; // Удалить из коллекции (и из БД)
                 }
-            }
-
-            // Обновляем коллекцию продукта, оставляя только те фото, которые нужно сохранить
-            product.getPhotos().clear();
-            product.getPhotos().addAll(photosToKeep);
+                return false; // Сохранить
+            });
         }
 
-        // 4. ДОБАВЛЕНИЕ НОВЫХ ФОТО
+        // 5. ДОБАВЛЕНИЕ НОВЫХ ФОТО
         if (photos != null && !photos.isEmpty()) {
             for (MultipartFile file : photos) {
                 if (!file.isEmpty()) {
@@ -201,11 +204,12 @@ public class AdminServiceImpl implements AdminService {
                     photo.setPhotoURL(photoURL);
                     photo.setProduct(product);
 
-                    product.getPhotos().add(photo); // Добавятся в конец списка
+                    product.getPhotos().add(photo);
                 }
             }
         }
 
+        // 6. СОХРАНЕНИЕ ПРОДУКТА
         productRepo.save(product);
     }
 
@@ -290,7 +294,13 @@ public class AdminServiceImpl implements AdminService {
 
         // 📷 Фото
         if (photo != null && !photo.isEmpty()) {
-            // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
+            // --- КРИТИЧЕСКИЙ ШАГ: УДАЛЕНИЕ СТАРОГО ФАЙЛА ---
+            String oldPhotoUrl = company.getPhotoURL();
+            if (oldPhotoUrl != null) {
+                deleteFileFromDisk(oldPhotoUrl);
+            }
+            // -------------------------------------------------
+
             String photoURL = processPhotoAndReturnURL(photo, uploadDir, subDirectory);
             company.setPhotoURL(photoURL);
             log.info("✅ Фото успешно сохранено: {}", photoURL);
@@ -372,27 +382,14 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public GetPromotion getPromotion(int promotionId) {
         Promotion promotion = promotionRepo.findById(promotionId);
-        return new GetPromotion(
-                promotion.getId(),
-                promotion.getName(),
-                promotion.getDescription(),
-                promotion.getPhotos()
-                        .stream()
-                        .map(ProductPhoto::getPhotoURL)
-                        .toList(),
-                promotion.getPercentageDiscounted(),
-                promotion.isGlobal(),
-                promotion.getCatalog().getId(),
-                promotion.getProduct().getId(),
-                promotion.getStartDate(),
-                promotion.getEndDate()
-        );
+        return toDtoPromotion(promotion);
     }
 
     @Override
     public void editPromotion(int promotionId, EditPromotion editPromotion, List<MultipartFile> photos) {
+
         // 1. ПОЛУЧЕНИЕ И ПРОВЕРКА АКЦИИ
-        // Предполагается, что findById возвращает Promotion или null
+        // Используйте Optional.orElseThrow для более чистого кода, если это возможно в вашем репозитории
         Promotion promotion = promotionRepo.findById(promotionId);
 
         if (promotion == null) {
@@ -402,39 +399,44 @@ public class AdminServiceImpl implements AdminService {
         // --- 2. ОБНОВЛЕНИЕ СВЯЗАННЫХ СУЩНОСТЕЙ (КАТАЛОГ и ПРОДУКТ) ---
 
         // 2.1. Обработка CatalogId
-        if (editPromotion.catalogId() != 0) {
-            // Если прислан 0 или null, сбрасываем привязку
+        // Обновляем, только если поле явно прислано (не null)
+        if (editPromotion.catalogId() != null) {
             if (editPromotion.catalogId() <= 0) {
+                // Если прислан 0 или отрицательное число, сбрасываем привязку
                 promotion.setCatalog(null);
             } else {
-                Catalog catalog = catalogRepo.findById(editPromotion.catalogId());
+                // *** ИСПРАВЛЕНИЕ: Используем .orElse(null) для обработки Optional ***
+                Catalog catalog = catalogRepo.findById(editPromotion.catalogId()).orElse(null);
+
                 if (catalog == null) {
                     throw new IllegalArgumentException("Каталог с ID " + editPromotion.catalogId() + " не найден.");
                 }
                 promotion.setCatalog(catalog);
             }
         }
-        // Если catalogId не прислан в DTO, старая привязка сохраняется.
 
         // 2.2. Обработка ProductId
-        if (editPromotion.productId() != 0) {
-            // Если прислан 0 или null, сбрасываем привязку
+        // Обновляем, только если поле явно прислано (не null)
+        if (editPromotion.productId() != null) {
             if (editPromotion.productId() <= 0) {
+                // Если прислан 0 или отрицательное число, сбрасываем привязку
                 promotion.setProduct(null);
             } else {
-                Product product = productRepo.findById(editPromotion.productId());
+                // *** ИСПРАВЛЕНИЕ: Используем .orElse(null) для обработки Optional ***
+                Product product = productRepo.findById(editPromotion.productId()).orElse(null);
+
                 if (product == null) {
                     throw new IllegalArgumentException("Продукт с ID " + editPromotion.productId() + " не найден.");
                 }
                 promotion.setProduct(product);
             }
         }
-        // Если productId не прислан в DTO, старая привязка сохраняется.
+        // Если editPromotion.productId() == null, старая привязка сохраняется.
 
 
-        // --- 3. ОБНОВЛЕНИЕ ТЕКСТОВЫХ ПОЛЕЙ ---
+        // --- 3. ОБНОВЛЕНИЕ ТЕКСТОВЫХ И БУЛЕВЫХ ПОЛЕЙ ---
 
-        // Используйте проверку на != null, чтобы обновить поле, только если оно передано в DTO
+        // Обновляем поле, только если оно передано в DTO (т.е. != null)
         if (editPromotion.name() != null)
             promotion.setName(editPromotion.name());
 
@@ -444,6 +446,7 @@ public class AdminServiceImpl implements AdminService {
         if (editPromotion.percentageDiscounted() != null)
             promotion.setPercentageDiscounted(editPromotion.percentageDiscounted());
 
+        // Обновляем global, только если оно передано (важно для сброса на false)
         if (editPromotion.global() != null)
             promotion.setGlobal(editPromotion.global());
 
@@ -454,7 +457,7 @@ public class AdminServiceImpl implements AdminService {
             promotion.setEndDate(editPromotion.endDate());
 
 
-        // 4. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
+        // --- 4. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ ---
         final String subDirectory = "promotions";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
@@ -470,17 +473,18 @@ public class AdminServiceImpl implements AdminService {
 
             List<Integer> idsToDelete = editPromotion.photosToDeleteIds();
 
-            // Используем removeIf для удаления элементов из коллекции и очистки файлов
             promotion.getPhotos().removeIf(photo -> {
-                // Здесь должна быть логика удаления файла с диска:
-                // deleteFileFromDisk(photo.getPhotoURL());
-                // Если у вас настроен orphanRemoval=true, JPA удалит объект ProductPhoto из БД.
-                return idsToDelete.contains(photo.getId());
+
+                // <<< НОВОЕ: ВЫЗОВ МЕТОДА УДАЛЕНИЯ ПЕРЕД ИЗВЛЕЧЕНИЕМ ИЗ КОЛЛЕКЦИИ >>>
+                if (idsToDelete.contains(photo.getId())) {
+                    deleteFileFromDisk(photo.getPhotoURL()); // <-- Вызов здесь
+                    return true; // Удалить из коллекции (и из БД, если настроен orphanRemoval)
+                }
+                return false;
             });
         }
 
         // 5.2. ДОБАВЛЕНИЕ НОВЫХ ФОТОГРАФИЙ
-        // Новые фото добавляются к оставшимся старым фото в коллекции promotion.getPhotos()
         if (photos != null && !photos.isEmpty()) {
             for (MultipartFile file : photos) {
                 if (!file.isEmpty()) {
@@ -495,10 +499,50 @@ public class AdminServiceImpl implements AdminService {
             }
         }
 
-        // 6. СОХРАНЕНИЕ АКЦИИ (со всеми изменениями)
+        // --- 6. КОМПЛЕКСНАЯ ПОСТ-ВАЛИДАЦИЯ ---
+
+        // Проверяем, что акция ПРИВЯЗАНА ХОТЯ БЫ К ОДНОМУ объекту после всех изменений.
+        boolean isBoundToCatalog = promotion.getCatalog() != null;
+        boolean isBoundToProduct = promotion.getProduct() != null;
+        // Используем isGlobal(), если ваша сущность использует этот метод, иначе getGlobal()
+        boolean isGlobal = promotion.isGlobal();
+
+        if (!isBoundToCatalog && !isBoundToProduct && !isGlobal) {
+            // Отменяем сохранение и сообщаем пользователю, что акция не имеет применения
+            throw new IllegalArgumentException("Акция должна быть привязана хотя бы к одному объекту: Каталогу, Продукту или должна быть помечена как Глобальная.");
+        }
+
+        // 7. СОХРАНЕНИЕ АКЦИИ (со всеми изменениями)
         promotionRepo.save(promotion);
     }
+    private void deleteFileFromDisk(String relativePhotoUrl) {
+        if (relativePhotoUrl == null || relativePhotoUrl.trim().isEmpty()) {
+            // Если путь пуст, нечего удалять.
+            return;
+        }
 
+        // 1. Создаем абсолютный путь к файлу
+        // (Например: /home/app/uploads + /promotions/a8b9c1d2.jpg)
+        Path filePath = Paths.get(UPLOAD_ROOT_PATH, relativePhotoUrl);
+
+        try {
+            // 2. Проверяем, существует ли файл
+            if (Files.exists(filePath)) {
+                // 3. Удаляем файл
+                Files.delete(filePath);
+                // DEBUG (опционально):
+                log.info("Успешно удален файл: " + filePath);
+            } else {
+                // WARN (опционально): Файл не найден, но это не критическая ошибка, просто предупреждение.
+                log.info("Предупреждение: Файл для удаления не найден: " + filePath);
+            }
+        } catch (IOException e) {
+            // Логируем ошибку, но не бросаем RuntimeException, чтобы не прерывать транзакцию
+            // (Мы все равно удалили ссылку на файл из БД, даже если сам файл остался на диске).
+            log.info("Ошибка при удалении файла с диска: " + filePath + ". Причина: " + e.getMessage());
+            // Вы можете использовать здесь логгер (log.error(...))
+        }
+    }
     @Override
     public void deletePromotion(Integer promotionId) {
         promotionRepo.deleteById(promotionId);
