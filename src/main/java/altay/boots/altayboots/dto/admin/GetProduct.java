@@ -7,7 +7,7 @@ import java.util.List;
 @Schema(description = "Информация о продукте")
 public record GetProduct(
         @Schema(description = "Id продукта", example = "1")
-        Integer id,
+        Integer product_id,
         @Schema(description = "Название продукта", example = "Кроссовки Adidas UltraBoost")
         String name,
 

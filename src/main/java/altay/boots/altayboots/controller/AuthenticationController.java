@@ -107,7 +107,7 @@ public class AuthenticationController {
     }
 
     @Operation(summary = "Получить продукты каталога по ID")
-    @GetMapping("/catalog/{catalog_id}")
+    @GetMapping("/catalog-products/{catalog_id}")
     public ResponseEntity<List<GetProduct>> getCatalog(
             @Parameter(description = "ID каталога", example = "1")
             @PathVariable Integer catalog_id

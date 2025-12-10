@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record CartItemDto(
 
         @Schema(description = "ID позиции", example = "1")
-        Integer id,
+        Integer product_id,
 
         @Schema(description = "ID товара", example = "22")
         Integer productId,
@@ -18,6 +18,6 @@ public record CartItemDto(
         Integer quantity,
 
         @Schema(description = "Цена", example = "7990")
-        Integer price
+        Integer productPrice
 ) {}
 
