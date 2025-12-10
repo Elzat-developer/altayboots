@@ -38,57 +38,64 @@ public class UserServiceImpl implements UserService {
 
         // 2. Обновление данных пользователя с проверкой на null (Ваш код)
         // Это гарантирует, что существующие данные не будут перезаписаны null
-        if (createOrder.surName() != null) {
-            user.setSurName(createOrder.surName());
-        }
-        if (createOrder.lastName() != null) {
-            user.setLastName(createOrder.lastName());
-        }
-        if (createOrder.region() != null) {
-            user.setRegion(createOrder.region());
-        }
-        if (createOrder.cityOrDistrict() != null) {
-            user.setCityOrDistrict(createOrder.cityOrDistrict());
-        }
-        if (createOrder.street()!= null) {
-            user.setStreet(createOrder.street());
-        }
-        if (createOrder.houseOrApartment() != null) {
-            user.setHouseOrApartment(createOrder.houseOrApartment());
-        }
-        if (createOrder.index() != null) {
-            user.setIndexPost(createOrder.index());
+        if (createOrder.surName() != null) { user.setSurName(createOrder.surName()); }
+        if (createOrder.lastName() != null) { user.setLastName(createOrder.lastName()); }
+        if (createOrder.region() != null) { user.setRegion(createOrder.region()); }
+        if (createOrder.cityOrDistrict() != null) { user.setCityOrDistrict(createOrder.cityOrDistrict()); }
+        if (createOrder.street()!= null) { user.setStreet(createOrder.street()); }
+        if (createOrder.houseOrApartment() != null) { user.setHouseOrApartment(createOrder.houseOrApartment()); }
+        if (createOrder.index() != null) { user.setIndexPost(createOrder.index()); }
+        // 2. Ищем корзину пользователя
+        Cart cart = cartRepo.findByUser(user);
+        if (cart == null || cart.getItems().isEmpty()) { // Проверяем, что корзина существует и не пуста
+            throw new RuntimeException("Cannot create order: The cart is empty.");
         }
 
+        // 3. Получаем все позиции из корзины
+        // Лучше использовать cartItemRepo.findByCart(cart) или даже fetch-запрос,
+        // чтобы сразу загрузить продукт.
+        List<CartItem> cartItems = cart.getItems();
+
+        // 4. Создаем новый заказ
         Order order = new Order();
         order.setOrderStartDate(LocalDateTime.now());
-        order.setPaidStatus(PaidStatus.NOTPAY);
+        order.setPaidStatus(PaidStatus.NOTPAY); // Или PaidStatus.PENDING, в зависимости от логики
         order.setUser(user);
 
-        List<OrderItem> items = new ArrayList<>();
+        List<OrderItem> orderItems = new ArrayList<>();
 
-        for (OrderItemDto itemDto : createOrder.items()) {
+        // 5. Перенос позиций из корзины в OrderItem
+        for (CartItem cartItem : cartItems) {
 
-            // 3. Улучшенная проверка наличия товара с использованием Optional (Spring Data JPA)
-            // Если findById возвращает Optional, это корректный способ
-            Product product = productRepo.findById(itemDto.productInfo().productId());
+            // Проверка наличия продукта
+            Product product = cartItem.getProduct(); // Продукт уже должен быть загружен/связан
 
-            // 4. Проверка, что количество товара больше нуля
-            if (itemDto.quantity() <= 0) {
-                throw new IllegalArgumentException("Quantity must be greater than zero for product ID: " + product.getId());
+            if (product == null) {
+                // Если продукт в корзине каким-то образом оказался NULL
+                throw new RuntimeException("Product missing in cart item ID: " + cartItem.getId());
+            }
+            if (cartItem.getQuantity() <= 0) {
+                continue; // Игнорируем или выбрасываем исключение
             }
 
-            OrderItem item = new OrderItem();
-            item.setProduct(product);
-            item.setQuantity(itemDto.quantity());
-            item.setOrder(order);
+            // Создаем OrderItem
+            OrderItem orderItem = new OrderItem();
+            orderItem.setProduct(product);
+            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setOrder(order); // Связываем с новым заказом
 
-            items.add(item);
+            orderItems.add(orderItem);
+
+            // ⚠️ ОЧЕНЬ ВАЖНЫЙ ШАГ: Удаляем позицию из корзины
+            cartItemRepo.delete(cartItem);
         }
 
-        order.setItems(items);
-
+        // 6. Устанавливаем и сохраняем заказ
+        order.setItems(orderItems);
         Order savedOrder = orderRepo.save(order);
+
+        // 7. Очистка/удаление самой корзины (если нужно)
+        cartRepo.delete(cart); // Если корзина удаляется после оформления заказа.
 
         return savedOrder.getId();
     }
@@ -193,6 +200,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void addProductToCart(AddToCartDto addToCartDto) {
         User user = getContextUser();
 
@@ -207,7 +215,9 @@ public class UserServiceImpl implements UserService {
         // Проверяем товар
         Product product = productRepo.findById(addToCartDto.productId());
         if (product == null) throw new RuntimeException("Product not found");
-
+        if (addToCartDto.quantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive.");
+        }
         // 🟢 Находим товар в корзине, не грузя ВСЕ CartItem!
         CartItem existingItem = cartItemRepo.findByCartAndProduct(cart, product);
 

@@ -2,14 +2,8 @@ package altay.boots.altayboots.dto.user;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.util.List;
-
 @Schema(description = "Запрос на создание заказа")
 public record CreateOrder(
-
-        @Schema(description = "Товары заказа")
-        List<OrderItemDto> items,
-
         @Schema(description = "Фамилия", example = "Иманов")
         String surName,
 
