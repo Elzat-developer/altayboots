@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record DetailedOrderDTO(
-        Integer id,
+        Integer order_id,
         String name,
         LocalDateTime orderStartDate,
         String paidStatus, // Лучше String, чтобы избежать проблем с сериализацией Enum

@@ -472,13 +472,10 @@ public class AdminServiceImpl implements AdminService {
 
             // Используем removeIf для удаления элементов из коллекции и очистки файлов
             promotion.getPhotos().removeIf(photo -> {
-                if (idsToDelete.contains(photo.getId())) {
-                    // Здесь должна быть логика удаления файла с диска:
-                    // deleteFileFromDisk(photo.getPhotoURL());
-                    // Если у вас настроен orphanRemoval=true, JPA удалит объект ProductPhoto из БД.
-                    return true;
-                }
-                return false;
+                // Здесь должна быть логика удаления файла с диска:
+                // deleteFileFromDisk(photo.getPhotoURL());
+                // Если у вас настроен orphanRemoval=true, JPA удалит объект ProductPhoto из БД.
+                return idsToDelete.contains(photo.getId());
             });
         }
 
@@ -586,6 +583,7 @@ public class AdminServiceImpl implements AdminService {
         // Пользователь
         User u = order.getUser();
         UserDto userDto = new UserDto(
+                u.getId(),
                 u.getName(),
                 u.getSurName(),
                 u.getLastName(),

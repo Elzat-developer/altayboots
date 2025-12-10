@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record ProductDto(
 
         @Schema(description = "ID товара", example = "12")
-        Integer id,
+        Integer product_id,
 
         @Schema(description = "Название товара", example = "Кроссовки Nike Air Max")
         String name,

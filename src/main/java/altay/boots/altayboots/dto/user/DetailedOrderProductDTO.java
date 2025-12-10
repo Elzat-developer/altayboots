@@ -3,7 +3,7 @@ package altay.boots.altayboots.dto.user;
 import java.util.List;
 
 public record DetailedOrderProductDTO(
-        Integer id,
+        Integer product_id,
         String name,
         String description,
         Integer price,

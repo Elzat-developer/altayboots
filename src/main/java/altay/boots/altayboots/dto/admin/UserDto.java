@@ -4,7 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Информация о пользователе")
 public record UserDto(
-
+        @Schema(description = "Id пользователя", example = "65")
+        Integer user_id,
         @Schema(description = "Имя пользователя", example = "Азамат")
         String name,
 

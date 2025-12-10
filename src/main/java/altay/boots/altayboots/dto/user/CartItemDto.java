@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record CartItemDto(
 
         @Schema(description = "ID позиции", example = "1")
-        Integer product_id,
+        Integer cart_item_id,
 
         @Schema(description = "ID товара", example = "22")
         Integer productId,

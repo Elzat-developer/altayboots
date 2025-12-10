@@ -1,7 +1,7 @@
 package altay.boots.altayboots.dto.user;
 
 public record OrderUserDTO(
-        Integer id,
+        Integer user_id,
         String name,
         String surName,
         String lastName,
