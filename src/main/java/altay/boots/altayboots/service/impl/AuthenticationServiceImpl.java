@@ -36,6 +36,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public void signUp(SignUpRequest signUpRequest){
+
+        User userPhone = userRepo.findByPhone(signUpRequest.phone());
+        if (userPhone != null){
+            throw new RuntimeException("Этот phone уже используется!");
+        }
         User user = new User();
 
         user.setPhone(signUpRequest.phone());

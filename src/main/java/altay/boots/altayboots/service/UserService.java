@@ -8,15 +8,11 @@ import java.util.List;
 public interface UserService {
     UserDetailsService userDetailsService();
 
-    List<GetProductUser> getProducts();
-
-    GetProductUser getProduct(int productId);
-
     Integer createOrder(CreateOrder createOrder);
 
     List<GetOrder> getOrders(int userId);
 
-    GetOrder getOrder(int orderId);
+    DetailedOrderDTO getOrder(int orderId);
 
     void deleteOrder(Integer orderId);
 

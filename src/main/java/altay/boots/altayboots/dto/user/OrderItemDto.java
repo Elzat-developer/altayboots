@@ -4,11 +4,15 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Товар в заказе")
 public record OrderItemDto(
-
-        @Schema(description = "ID продукта", example = "3")
-        int productId,
+//        @Schema(description = "Имя продукта", example = "Зимние сопоги")
+//        String productName,
 
         @Schema(description = "Количество", example = "1")
-        int quantity
+        int quantity,
+//        @Schema(description = "Цена", example = "15000")
+//        int productPrice,
+//        @Schema(description = "Имя каталога", example = "Зимние")
+//        String catalogName
+        OrderItemProductDTO productInfo
 ) {}
 

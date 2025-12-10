@@ -36,7 +36,7 @@ public class UserPanelController {
             summary = "Получить один заказ",
             description = "Возвращает детали заказа по ID"
     )
-    public ResponseEntity<GetOrder> getOrder(@PathVariable Integer order_id) {
+    public ResponseEntity<DetailedOrderDTO> getOrder(@PathVariable Integer order_id) {
         return ResponseEntity.ok(userService.getOrder(order_id));
     }
 

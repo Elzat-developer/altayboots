@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -65,7 +66,7 @@ public class AuthenticationController {
             content = @Content(schema = @Schema())
     )
     public ResponseEntity<String> signUp(
-            @org.springframework.web.bind.annotation.RequestBody SignUpRequest signUpRequest
+            @Valid @RequestBody SignUpRequest signUpRequest
     ) {
         authenticationService.signUp(signUpRequest);
         return new ResponseEntity<>("Аккаунт успешно сохранен!", HttpStatus.CREATED);

@@ -31,59 +31,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<GetProductUser> getProducts() {
-        List<Product> products = productRepo.findAll();
-        return products.stream()
-                .map(this::toDtoProduct)
-                .toList();
-    }
-
-    private GetProductUser toDtoProduct(Product product) {
-        return new GetProductUser(
-                product.getId(),
-                product.getName(),
-                product.getDescription(),
-                product.getText(),
-                product.getPrice(),
-                product.getOldPrice(),
-                product.getPhotos()
-                        .stream()
-                        .map(ProductPhoto::getPhotoURL)
-                        .toList(),
-                product.getCatalog().getId()
-        );
-    }
-
-    @Override
-    public GetProductUser getProduct(int productId) {
-        Product product = productRepo.findById(productId);
-
-        List<String> photoList = product.getPhotos()
-                .stream()
-                .map(ProductPhoto::getPhotoURL)
-                .toList();
-
-        return new GetProductUser(
-                product.getId(),
-                product.getName(),
-                product.getDescription(),
-                product.getText(),
-                product.getPrice(),
-                product.getOldPrice(),
-                photoList,
-                product.getCatalog().getId()
-        );
-    }
-
-    @Override
     @Transactional
     public Integer createOrder(CreateOrder createOrder) {
         // 1. Получаем текущего аутентифицированного пользователя
         User user = getContextUser();
-
-        Order order = new Order();
-        order.setOrderStartDate(LocalDateTime.now());
-        order.setPaidStatus(PaidStatus.NOTPAY);
 
         // 2. Обновление данных пользователя с проверкой на null (Ваш код)
         // Это гарантирует, что существующие данные не будут перезаписаны null
@@ -108,8 +59,10 @@ public class UserServiceImpl implements UserService {
         if (createOrder.index() != null) {
             user.setIndexPost(createOrder.index());
         }
-        userRepo.save(user);
 
+        Order order = new Order();
+        order.setOrderStartDate(LocalDateTime.now());
+        order.setPaidStatus(PaidStatus.NOTPAY);
         order.setUser(user);
 
         List<OrderItem> items = new ArrayList<>();
@@ -118,11 +71,11 @@ public class UserServiceImpl implements UserService {
 
             // 3. Улучшенная проверка наличия товара с использованием Optional (Spring Data JPA)
             // Если findById возвращает Optional, это корректный способ
-            Product product = productRepo.findById(itemDto.productId());
+            Product product = productRepo.findById(itemDto.productInfo().productId());
 
             // 4. Проверка, что количество товара больше нуля
             if (itemDto.quantity() <= 0) {
-                throw new IllegalArgumentException("Quantity must be greater than zero for product ID: " + itemDto.productId());
+                throw new IllegalArgumentException("Quantity must be greater than zero for product ID: " + product.getId());
             }
 
             OrderItem item = new OrderItem();
@@ -142,6 +95,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    @Transactional
     public List<GetOrder> getOrders(int userId) {
         List<Order> orders = orderRepo.findAllByUserId(userId);
         return orders.stream()
@@ -150,14 +104,66 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public GetOrder getOrder(int orderId) {
-        Order order = orderRepo.findById(orderId);
-        return new GetOrder(
+    @Transactional(readOnly = true)
+    public DetailedOrderDTO getOrder(int orderId) {
+        Order order = orderRepo.findByIdWithDetails(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+        return toDetailedOrderDTO(order);
+    }
+
+    private DetailedOrderDTO toDetailedOrderDTO(Order order) {
+        // Преобразование PaidStatus в строку
+        String paidStatus = (order.getPaidStatus() != null) ? order.getPaidStatus().name() : null;
+
+        return new DetailedOrderDTO(
+                order.getId(),
+                order.getName(),
                 order.getOrderStartDate(),
-                order.getPaidStatus(),
-                order.getItems().stream()
-                        .map(this::toDtoItem)
-                        .toList()
+                paidStatus,
+                toDtoOrderUser(order.getUser()),
+                order.getItems().stream().map(this::toDtoDetailedItem).toList()
+        );
+    }
+
+    private OrderUserDTO toDtoOrderUser(User user) {
+        return new OrderUserDTO(
+                user.getId(),
+                user.getName(),
+                user.getSurName(),
+                user.getLastName(),
+                user.getRegion(),
+                user.getCityOrDistrict(),
+                user.getStreet(),
+                user.getHouseOrApartment(),
+                user.getIndexPost()
+        );
+    }
+    private ProductPhotoDTO toDtoPhoto(ProductPhoto photo) {
+        return new ProductPhotoDTO(photo.getPhotoURL());
+    }
+
+    // Преобразование Продукта
+    private DetailedOrderProductDTO toDtoDetailedProduct(Product product) {
+        // Каталог должен быть загружен либо Eager, либо внутри транзакции
+        String catalogName = (product.getCatalog() != null) ? product.getCatalog().getName() : null;
+
+        return new DetailedOrderProductDTO(
+                product.getId(),
+                product.getName(),
+                product.getDescription(),
+                product.getPrice(),
+                product.getOldPrice(),
+                catalogName,
+                product.getPhotos().stream().map(this::toDtoPhoto).toList()
+        );
+    }
+
+    // Преобразование Позиции Заказа (Item)
+    private DetailedOrderItemDTO toDtoDetailedItem(OrderItem item) {
+        return new DetailedOrderItemDTO(
+                item.getId(),
+                item.getQuantity(),
+                toDtoDetailedProduct(item.getProduct())
         );
     }
 
@@ -276,6 +282,7 @@ public class UserServiceImpl implements UserService {
 
     private GetOrder toDtoOrder(Order order) {
         return new GetOrder(
+                order.getId(),
                 order.getOrderStartDate(),
                 order.getPaidStatus(),
                 order.getItems().stream()
@@ -286,8 +293,22 @@ public class UserServiceImpl implements UserService {
 
     private OrderItemDto toDtoItem(OrderItem orderItem) {
         return new OrderItemDto(
-                orderItem.getId(),
-                orderItem.getQuantity()
+                orderItem.getQuantity(), // <--- Убедитесь, что это поле есть и оно используется
+                toDtoItemProduct(orderItem.getProduct())
+        );
+    }
+
+    private OrderItemProductDTO toDtoItemProduct(Product product) {
+        // Если Product.catalog является объектом Catalog, нужно получить его ID
+        String catalogName = (product.getCatalog() != null)
+                ? product.getCatalog().getName()
+                : null;
+
+        return new OrderItemProductDTO(
+                product.getId(),
+                product.getName(),
+                product.getPrice(),
+                catalogName
         );
     }
 }
