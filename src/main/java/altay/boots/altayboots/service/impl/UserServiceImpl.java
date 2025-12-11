@@ -151,6 +151,19 @@ public class UserServiceImpl implements UserService {
 
     // Преобразование Продукта
     private DetailedOrderProductDTO toDtoDetailedProduct(Product product) {
+        // *** КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: БЕЗОПАСНАЯ ОБРАБОТКА NULL ***
+        if (product == null) {
+            // Если продукт удален, возвращаем DTO с минимальной информацией/заглушкой
+            return new DetailedOrderProductDTO(
+                    null,
+                    "[Продукт удален]", // Название-заглушка
+                    "Данные об этом продукте больше не доступны.",
+                    0,
+                    null,
+                    null,
+                    List.of() // Пустой список фото
+            );
+        }
         // Каталог должен быть загружен либо Eager, либо внутри транзакции
         String catalogName = (product.getCatalog() != null) ? product.getCatalog().getName() : null;
 
@@ -245,16 +258,27 @@ public class UserServiceImpl implements UserService {
             return new CartDto(null, List.of(), 0);
         }
 
-        List<CartItem> items = cartItemRepo.findByCartId(cart.getId());
+        // 🔴 Замена: Используем новый метод с JOIN FETCH
+        List<CartItem> items = cartItemRepo.findByCartIdWithProducts(cart.getId());
 
         List<CartItemDto> dtos = items.stream()
-                .map(i -> new CartItemDto(
-                        i.getId(),
-                        i.getProduct().getId(),
-                        i.getProduct().getName(),
-                        i.getQuantity(),
-                        i.getProduct().getPrice()
-                ))
+                .map(i -> {
+                    // Дополнительная проверка на NULL, если вы не уверены в целостности данных
+                    if (i.getProduct() == null) {
+                        // Это не должно произойти после JOIN FETCH + NOT NULL/FK,
+                        // но это хорошая защита.
+                        System.err.println("WARNING: CartItem ID " + i.getId() + " has null Product.");
+                        return null; // Пропускаем элемент с ошибкой
+                    }
+                    return new CartItemDto(
+                            i.getId(),
+                            i.getProduct().getId(),
+                            i.getProduct().getName(),
+                            i.getQuantity(),
+                            i.getProduct().getPrice()
+                    );
+                })
+                .filter(java.util.Objects::nonNull) // Отфильтровываем NULL, если они возникли
                 .toList();
 
         int total = items.stream()
