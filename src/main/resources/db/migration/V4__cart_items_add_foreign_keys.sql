@@ -1,26 +1,26 @@
+-- V4__cart_items_add_foreign_keys.sql
+
+-- 1. Очистка: Удаляем невалидные записи, чтобы можно было установить NOT NULL
 DELETE FROM cart_items
 WHERE carts_id NOT IN (SELECT id FROM carts)
    OR products_id NOT IN (SELECT id FROM products);
 
--- 2. Устанавливаем NOT NULL для обязательных колонок в cart_items
+-- 2. Обеспечение целостности: Устанавливаем NOT NULL
 ALTER TABLE cart_items
     MODIFY COLUMN carts_id INT NOT NULL,
     MODIFY COLUMN products_id INT NOT NULL,
     MODIFY COLUMN quantity INT NOT NULL;
 
--- 3. Добавляем внешний ключ для связи с carts
--- ON DELETE CASCADE: Если корзина (Cart) будет удалена, все связанные с ней CartItem удалятся.
+-- 3. Добавление внешнего ключа для связи с Cart
 ALTER TABLE cart_items
     ADD CONSTRAINT fk_cart_items_carts
         FOREIGN KEY (carts_id)
             REFERENCES carts(id)
-            ON DELETE CASCADE;
+            ON DELETE CASCADE; -- Удаление корзины удалит элементы
 
--- 4. Добавляем внешний ключ для связи с products
--- ON DELETE RESTRICT (или NO ACTION): Запрещает удаление Product, пока на него ссылается CartItem.
--- Это гарантирует, что i.getProduct() в вашем Java-коде никогда не будет null.
+-- 4. Добавление внешнего ключа для связи с Product
 ALTER TABLE cart_items
     ADD CONSTRAINT fk_cart_items_products
         FOREIGN KEY (products_id)
             REFERENCES products(id)
-            ON DELETE RESTRICT;
+            ON DELETE RESTRICT; -- Нельзя удалить продукт, пока он в чьей-то корзине
