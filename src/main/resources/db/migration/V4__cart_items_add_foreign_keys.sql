@@ -1,3 +1,4 @@
+DELETE FROM cart_items WHERE carts_id IS NULL OR products_id IS NULL;
 -- 1. Устанавливаем NOT NULL для обязательных колонок в cart_items
 -- Это обеспечит, что в таблице не будет записей без ссылки на Cart или Product.
 ALTER TABLE cart_items
