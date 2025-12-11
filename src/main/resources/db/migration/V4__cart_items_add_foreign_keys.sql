@@ -1,5 +1,4 @@
-DELETE FROM cart_items WHERE carts_id IS NULL OR products_id IS NULL;
--- 1. Устанавливаем NOT NULL для обязательных колонок в cart_items
+DELETE FROM cart_items WHERE user_id NOT IN (SELECT id FROM users) OR product_id NOT IN (SELECT id FROM products);-- 1. Устанавливаем NOT NULL для обязательных колонок в cart_items
 -- Это обеспечит, что в таблице не будет записей без ссылки на Cart или Product.
 ALTER TABLE cart_items
     MODIFY COLUMN carts_id INT NOT NULL,
@@ -30,3 +29,5 @@ ALTER TABLE products
         FOREIGN KEY (catalogs_id)
             REFERENCES catalogs(id)
             ON DELETE SET NULL;
+ALTER TABLE cart_items
+    ADD CONSTRAINT fk_cart_items_user_id FOREIGN KEY (user_id) REFERENCES users (id);
