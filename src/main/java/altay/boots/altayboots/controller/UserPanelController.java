@@ -22,13 +22,13 @@ public class UserPanelController {
 
     private final UserService userService;
 
-    @GetMapping("/orders/{user_id}")
+    @GetMapping("/orders")
     @Operation(
             summary = "Получить заказы пользователя",
-            description = "Возвращает список заказов по user_id"
+            description = "Возвращает список заказов. ID пользователя берется из токена."
     )
-    public ResponseEntity<List<GetOrder>> getOrders(@PathVariable Integer user_id) {
-        return ResponseEntity.ok(userService.getOrders(user_id));
+    public ResponseEntity<List<GetOrder>> getOrders() {
+        return ResponseEntity.ok(userService.getOrders());
     }
 
     @GetMapping("/order/{order_id}")

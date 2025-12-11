@@ -10,7 +10,7 @@ public interface UserService {
 
     Integer createOrder(CreateOrder createOrder);
 
-    List<GetOrder> getOrders(int userId);
+    List<GetOrder> getOrders();
 
     DetailedOrderDTO getOrder(int orderId);
 

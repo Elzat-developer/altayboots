@@ -103,7 +103,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public List<GetOrder> getOrders(int userId) {
+    public List<GetOrder> getOrders() {
+        User user = getContextUser();
+        int userId = user.getId();
         List<Order> orders = orderRepo.findAllByUserId(userId);
         return orders.stream()
                 .map(this::toDtoOrder)
