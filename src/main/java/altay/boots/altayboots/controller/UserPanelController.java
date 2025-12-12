@@ -25,7 +25,7 @@ public class UserPanelController {
     @GetMapping("/orders")
     @Operation(
             summary = "Получить заказы пользователя",
-            description = "Возвращает список заказов. ID пользователя берется из токена."
+            description = "Возвращает список заказов. ID пользователя берется из токена автоматический!."
     )
     public ResponseEntity<List<GetOrder>> getOrders() {
         return ResponseEntity.ok(userService.getOrders());
