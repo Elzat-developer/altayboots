@@ -1,9 +1,3 @@
-DROP INDEX idx_product_photos_promo_order ON product_photos;
-DROP INDEX idx_product_photos_product_order ON product_photos;
-
-ALTER TABLE product_photos
-    DROP COLUMN photo_order_index;
-
 ALTER TABLE product_photos
     ADD COLUMN photo_order_index INT NULL DEFAULT 0;
 -- Создаем индекс для более быстрого доступа к порядку, если необходимо (опционально)
