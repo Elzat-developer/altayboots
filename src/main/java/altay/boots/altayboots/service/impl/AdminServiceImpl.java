@@ -15,8 +15,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Log4j2
@@ -34,9 +35,6 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void createProduct(CreateProduct createProduct, List<MultipartFile> photos) {
-        // 1. ПРОВЕРКА КАТАЛОГА ⚠️
-        // Предполагается, что catalogRepo.findById() возвращает Catalog или null.
-        // Если используется Optional<Catalog>, код ниже будет немного отличаться.
         Catalog catalog = catalogRepo.findById(createProduct.catalog_id());
 
         if (catalog == null) {
@@ -52,11 +50,9 @@ public class AdminServiceImpl implements AdminService {
         product.setPrice(createProduct.price());
         product.setOldPrice(createProduct.oldPrice());
 
-        // Установка найденного каталога
         product.setCatalog(catalog);
 
         // Первое сохранение для получения ID продукта,
-        // необходимого для привязки фотографий (если у вас нет каскадного сохранения)
         productRepo.save(product);
 
         // --- ЛОГИКА СОХРАНЕНИЯ ФОТОГРАФИЙ ---
@@ -73,19 +69,17 @@ public class AdminServiceImpl implements AdminService {
             for (MultipartFile file : photos) {
                 if (!file.isEmpty()) {
                     // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
-                    String photoURL = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
+                    String photoURL = fileProcessingService.processPhotoAndReturnURL(
+                            file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
                     photo.setPhotoURL(photoURL);
                     photo.setProduct(product);
 
-                    // Добавление фото к коллекции продукта (если у вас установлены отношения)
                     product.getPhotos().add(photo);
                 }
             }
         }
-
-        // Второе сохранение для обновления информации о фотографиях (если у вас нет каскадного сохранения)
         productRepo.save(product);
     }
 
@@ -102,7 +96,6 @@ public class AdminServiceImpl implements AdminService {
         // 1. Поиск продукта (предполагаем, что findById возвращает Product или бросает исключение)
         Product product = productRepo.findById(productId);
 
-        // Добавьте проверку, если findById может вернуть null, чтобы избежать сбоя
         if (product == null) {
             throw new IllegalArgumentException("Продукт с ID " + productId + " не найден.");
         }
@@ -126,7 +119,6 @@ public class AdminServiceImpl implements AdminService {
                         .toList() :
                 Collections.emptyList(); // Используем Collections.emptyList() для безопасности
 
-        // 4. Возврат DTO
         return new GetProduct(
                 product.getId(),
                 product.getName(),
@@ -135,35 +127,26 @@ public class AdminServiceImpl implements AdminService {
                 product.getPrice(),
                 product.getOldPrice(),
                 photoList,
-                // Используем безопасно извлеченный ID каталога
                 catalogId
         );
     }
 
-
     @Override
     public void editProduct(int product_id, EditProduct editProduct, List<MultipartFile> photos) {
-        // 1. ПОЛУЧЕНИЕ ПРОДУКТА
-        // Предполагаем, что findById возвращает Product или null
         Product product = productRepo.findById(product_id);
 
         if (product == null) {
             throw new IllegalArgumentException("Продукт с ID " + product_id + " не найден.");
         }
 
-        // 2. ОБНОВЛЕНИЕ ТЕКСТОВЫХ ПОЛЕЙ
         if (editProduct.name() != null)
             product.setName(editProduct.name());
-
         if (editProduct.description() != null)
             product.setDescription(editProduct.description());
-
         if (editProduct.text() != null)
             product.setText(editProduct.text());
-
         if (editProduct.price() != null)
             product.setPrice(editProduct.price());
-
         if (editProduct.oldPrice() != null)
             product.setOldPrice(editProduct.oldPrice());
 
@@ -176,26 +159,15 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("Не удалось создать папку загрузки", e);
         }
 
-        // 4. ЛОГИКА ИЗБИРАТЕЛЬНОГО УДАЛЕНИЯ ФОТОГРАФИЙ (ОБНОВЛЕННЫЙ БЛОК)
-        if (editProduct.photosToDeleteIds() != null && !editProduct.photosToDeleteIds().isEmpty()) {
+        // --- 4. НОВАЯ ЛОГИКА ОБРАБОТКИ ФОТОГРАФИЙ (ЗАМЕНА И ПОРЯДОК) ---
 
-            List<Integer> idsToDelete = editProduct.photosToDeleteIds();
+        // 4.1. ЗАГРУЗКА НОВЫХ ФОТО И СОЗДАНИЕ КАРТЫ ЗАМЕН
+        Map<String, ProductPhoto> newPhotosMap = new HashMap<>();
+        // Key: Заглушка (NEW_FILE_X), Value: ProductPhoto
 
-            // Используем removeIf для удаления элементов из коллекции и очистки файлов
-            product.getPhotos().removeIf(photo -> {
-
-                if (idsToDelete.contains(photo.getId())) {
-                    // *** КРИТИЧЕСКИЙ ШАГ: УДАЛЕНИЕ ФАЙЛА С ДИСКА ***
-                    fileProcessingService.deleteFileFromDisk(photo.getPhotoURL());
-                    return true; // Удалить из коллекции (и из БД)
-                }
-                return false; // Сохранить
-            });
-        }
-
-        // 5. ДОБАВЛЕНИЕ НОВЫХ ФОТО
         if (photos != null && !photos.isEmpty()) {
-            for (MultipartFile file : photos) {
+            for (int i = 0; i < photos.size(); i++) {
+                MultipartFile file = photos.get(i);
                 if (!file.isEmpty()) {
                     String photoURL = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
@@ -203,15 +175,25 @@ public class AdminServiceImpl implements AdminService {
                     photo.setPhotoURL(photoURL);
                     photo.setProduct(product);
 
-                    product.getPhotos().add(photo);
+                    // Создаем заглушку, соответствующую порядку загруженных файлов
+                    String placeholder = "NEW_FILE_" + i;
+                    newPhotosMap.put(placeholder, photo);
                 }
             }
         }
 
-        // 6. СОХРАНЕНИЕ ПРОДУКТА
+        // 4.2. ОПРЕДЕЛЕНИЕ УДАЛЯЕМЫХ ФОТОГРАФИЙ
+        List<ProductPhoto> finalPhotosList = getFinalOrderedPhotos(
+                editProduct.finalPhotoOrder(),
+                product.getPhotos(),
+                newPhotosMap);
+
+        // 4.5. ПЕРЕЗАПИСЬ КОЛЛЕКЦИИ (КЛЮЧЕВОЙ МОМЕНТ ДЛЯ @OrderColumn)
+        // Hibernate использует новый список для обновления поля photo_order в БД.
+        product.setPhotos(finalPhotosList);
+
         productRepo.save(product);
     }
-
 
     @Override
     public void deleteProduct(Integer productId) {
@@ -248,7 +230,6 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("Catalog not found");
         }
 
-        // Получаем список продуктов
         List<Product> products = catalog.getProducts();
 
         return products.stream()
@@ -281,7 +262,6 @@ public class AdminServiceImpl implements AdminService {
         company.setName(companyDescription.name());
         company.setText(companyDescription.text());
 
-
         final String subDirectory = "company";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
@@ -293,12 +273,11 @@ public class AdminServiceImpl implements AdminService {
 
         // 📷 Фото
         if (photo != null && !photo.isEmpty()) {
-            // --- КРИТИЧЕСКИЙ ШАГ: УДАЛЕНИЕ СТАРОГО ФАЙЛА ---
+            // --- КРИТИЧЕСКИЙ ШАГ: УДАЛЕНИЕ СТАРОГО ФАЙЛА
             String oldPhotoUrl = company.getPhotoURL();
             if (oldPhotoUrl != null) {
                 fileProcessingService.deleteFileFromDisk(oldPhotoUrl);
             }
-            // -------------------------------------------------
 
             String photoURL = fileProcessingService.processPhotoAndReturnURL(photo, uploadDir, subDirectory);
             company.setPhotoURL(photoURL);
@@ -314,14 +293,11 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void createPromotion(CreatePromotion createPromotion, List<MultipartFile> photos) {
 
-        // --- 1. ИНИЦИАЛИЗАЦИЯ И УСТАНОВКА ОСНОВНЫХ ПОЛЕЙ АКЦИИ ---
         Promotion promotion = new Promotion();
 
-        // Установка полей, пришедших из DTO
         promotion.setName(createPromotion.name());
         promotion.setDescription(createPromotion.description());
 
-        // Используем Integer (соответствует int в сущности/DTO)
         promotion.setPercentageDiscounted(createPromotion.percentageDiscounted());
 
         // Инициализация привязок к сущностям как null (т.к. привязка будет позже)
@@ -329,13 +305,11 @@ public class AdminServiceImpl implements AdminService {
         promotion.setProduct(null);
 
         // Если акция по умолчанию не глобальная, установите false
-        // Если поле global отсутствует в DTO, но обязательно в сущности:
          promotion.setGlobal(false);
 
         promotion.setStartDate(createPromotion.startDate());
         promotion.setEndDate(createPromotion.endDate());
 
-        // --- 2. ПЕРВОЕ СОХРАНЕНИЕ ---
         // Сохранение акции для получения ID, необходимого для привязки фото
         promotionRepo.save(promotion);
 
@@ -387,15 +361,11 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void editPromotion(int promotionId, EditPromotion editPromotion, List<MultipartFile> photos) {
 
-        // 1. ПОЛУЧЕНИЕ И ПРОВЕРКА АКЦИИ
-        // Используйте Optional.orElseThrow для более чистого кода, если это возможно в вашем репозитории
         Promotion promotion = promotionRepo.findById(promotionId);
 
         if (promotion == null) {
             throw new IllegalArgumentException("Акция с ID " + promotionId + " не найдена.");
         }
-
-        // --- 2. ОБНОВЛЕНИЕ СВЯЗАННЫХ СУЩНОСТЕЙ (КАТАЛОГ и ПРОДУКТ) ---
 
         // 2.1. Обработка CatalogId
         // Обновляем, только если поле явно прислано (не null)
@@ -404,7 +374,6 @@ public class AdminServiceImpl implements AdminService {
                 // Если прислан 0 или отрицательное число, сбрасываем привязку
                 promotion.setCatalog(null);
             } else {
-                // *** ИСПРАВЛЕНИЕ: Используем .orElse(null) для обработки Optional ***
                 Catalog catalog = catalogRepo.findById(editPromotion.catalogId()).orElse(null);
 
                 if (catalog == null) {
@@ -432,28 +401,17 @@ public class AdminServiceImpl implements AdminService {
         }
         // Если editPromotion.productId() == null, старая привязка сохраняется.
 
+        if (editPromotion.name() != null) promotion.setName(editPromotion.name());
 
-        // --- 3. ОБНОВЛЕНИЕ ТЕКСТОВЫХ И БУЛЕВЫХ ПОЛЕЙ ---
+        if (editPromotion.description() != null) promotion.setDescription(editPromotion.description());
 
-        // Обновляем поле, только если оно передано в DTO (т.е. != null)
-        if (editPromotion.name() != null)
-            promotion.setName(editPromotion.name());
+        if (editPromotion.percentageDiscounted() != null) promotion.setPercentageDiscounted(editPromotion.percentageDiscounted());
 
-        if (editPromotion.description() != null)
-            promotion.setDescription(editPromotion.description());
+        if (editPromotion.global() != null) promotion.setGlobal(editPromotion.global());
 
-        if (editPromotion.percentageDiscounted() != null)
-            promotion.setPercentageDiscounted(editPromotion.percentageDiscounted());
+        if (editPromotion.startDate() != null) promotion.setStartDate(editPromotion.startDate());
 
-        // Обновляем global, только если оно передано (важно для сброса на false)
-        if (editPromotion.global() != null)
-            promotion.setGlobal(editPromotion.global());
-
-        if (editPromotion.startDate() != null)
-            promotion.setStartDate(editPromotion.startDate());
-
-        if (editPromotion.endDate() != null)
-            promotion.setEndDate(editPromotion.endDate());
+        if (editPromotion.endDate() != null) promotion.setEndDate(editPromotion.endDate());
 
 
         // --- 4. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ ---
@@ -465,38 +423,37 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("Не удалось создать папку загрузки", e);
         }
 
-        // --- 5. ОБРАБОТКА ИЗМЕНЕНИЙ ФОТОГРАФИЙ ---
+        // --- 5. ОБРАБОТКА ИЗМЕНЕНИЙ ФОТОГРАФИЙ (СЛОЖНАЯ ЛОГИКА ЗАМЕНЫ) ---
 
-        // 5.1. ИЗБИРАТЕЛЬНОЕ УДАЛЕНИЕ СТАРЫХ ФОТОГРАФИЙ
-        if (editPromotion.photosToDeleteIds() != null && !editPromotion.photosToDeleteIds().isEmpty()) {
+        // 5.1. ЗАГРУЗКА НОВЫХ ФОТОГРАФИЙ И СОЗДАНИЕ КАРТЫ ЗАМЕН
+        Map<String, ProductPhoto> newPhotosMap = new HashMap<>();
+        // Key: Заглушка (NEW_FILE_X), Value: Созданный объект ProductPhoto
 
-            List<Integer> idsToDelete = editPromotion.photosToDeleteIds();
-
-            promotion.getPhotos().removeIf(photo -> {
-
-                // <<< НОВОЕ: ВЫЗОВ МЕТОДА УДАЛЕНИЯ ПЕРЕД ИЗВЛЕЧЕНИЕМ ИЗ КОЛЛЕКЦИИ >>>
-                if (idsToDelete.contains(photo.getId())) {
-                    fileProcessingService.deleteFileFromDisk(photo.getPhotoURL()); // <-- Вызов здесь
-                    return true; // Удалить из коллекции (и из БД, если настроен orphanRemoval)
-                }
-                return false;
-            });
-        }
-
-        // 5.2. ДОБАВЛЕНИЕ НОВЫХ ФОТОГРАФИЙ
         if (photos != null && !photos.isEmpty()) {
-            for (MultipartFile file : photos) {
+            for (int i = 0; i < photos.size(); i++) {
+                MultipartFile file = photos.get(i);
                 if (!file.isEmpty()) {
                     String photoURL = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
                     photo.setPhotoURL(photoURL);
                     photo.setPromotion(promotion);
+                    // Важно: Пока не сохраняем, ID не будет, но объект готов
 
-                    promotion.getPhotos().add(photo);
+                    // Создаем заглушку, соответствующую порядку загруженных файлов
+                    String placeholder = "NEW_FILE_" + i;
+                    newPhotosMap.put(placeholder, photo);
                 }
             }
         }
+
+        // 5.2. АНАЛИЗ ПОРЯДКА И ОПРЕДЕЛЕНИЕ УДАЛЯЕМЫХ ФОТОГРАФИЙ
+        List<ProductPhoto> finalPhotosList = getFinalOrderedPhotos(
+                editPromotion.finalPhotoOrder(),
+                promotion.getPhotos(),
+                newPhotosMap);
+
+        promotion.setPhotos(finalPhotosList);
 
         // --- 6. КОМПЛЕКСНАЯ ПОСТ-ВАЛИДАЦИЯ ---
 
@@ -514,14 +471,71 @@ public class AdminServiceImpl implements AdminService {
         // 7. СОХРАНЕНИЕ АКЦИИ (со всеми изменениями)
         promotionRepo.save(promotion);
     }
+    // ------------------- PRIVATE МЕТОД ОБРАБОТКИ ПОРЯДКА ФОТО --------------------
+    private List<ProductPhoto> getFinalOrderedPhotos(
+            List<String> desiredOrderList,
+            List<ProductPhoto> currentPhotos,
+            Map<String, ProductPhoto> newPhotosMap) {
+
+        if (desiredOrderList == null) desiredOrderList = Collections.emptyList();
+
+        // 1. ОПРЕДЕЛЕНИЕ ID, КОТОРЫЕ ДОЛЖНЫ ОСТАТЬСЯ
+        Set<Integer> desiredExistingIds = desiredOrderList.stream()
+                .filter(s -> !s.startsWith("NEW_FILE_"))
+                .map(Integer::valueOf)
+                .collect(Collectors.toSet());
+
+        // 2. ОПРЕДЕЛЕНИЕ ID, КОТОРЫЕ НУЖНО УДАЛИТЬ
+        Set<Integer> currentPhotoIds = currentPhotos.stream()
+                .map(ProductPhoto::getId)
+                .collect(Collectors.toSet());
+
+        Set<Integer> idsToDelete = currentPhotoIds.stream()
+                .filter(id -> !desiredExistingIds.contains(id))
+                .collect(Collectors.toSet());
+
+        // 3. ФИЗИЧЕСКОЕ УДАЛЕНИЕ СТАРЫХ ФОТО ИЗ КОЛЛЕКЦИИ
+        if (!idsToDelete.isEmpty()) {
+            currentPhotos.removeIf(photo -> {
+                if (idsToDelete.contains(photo.getId())) {
+                    fileProcessingService.deleteFileFromDisk(photo.getPhotoURL());
+                    return true; // Удалить из коллекции
+                }
+                return false;
+            });
+        }
+
+        // 4. ФОРМИРОВАНИЕ ФИНАЛЬНОГО, УПОРЯДОЧЕННОГО СПИСКА
+        // Карта оставшихся старых объектов ProductPhoto
+        Map<Integer, ProductPhoto> existingPhotosMap = currentPhotos.stream()
+                .collect(Collectors.toMap(ProductPhoto::getId, Function.identity()));
+
+        List<ProductPhoto> finalPhotosList = new ArrayList<>();
+
+        // Проходим по желаемому порядку:
+        for (String item : desiredOrderList) {
+            if (item.startsWith("NEW_FILE_")) {
+                // Вставляем новое фото вместо заглушки
+                ProductPhoto newPhoto = newPhotosMap.get(item);
+                if (newPhoto != null) {
+                    finalPhotosList.add(newPhoto);
+                }
+            } else {
+                // Вставляем старое, оставшееся фото
+                Integer photoId = Integer.valueOf(item);
+                ProductPhoto existingPhoto = existingPhotosMap.get(photoId);
+                if (existingPhoto != null) {
+                    finalPhotosList.add(existingPhoto);
+                }
+            }
+        }
+        return finalPhotosList;
+    }
 
     @Override
     public void deletePromotion(Integer promotionId) {
         promotionRepo.deleteById(promotionId);
     }
-
-
-    // --- МЕТОДЫ Order / toDto / Catalog ---
 
     @Override
     public List<GetAdminOrderSimple> getOrders() {
@@ -557,7 +571,7 @@ public class AdminServiceImpl implements AdminService {
                 .map(oi -> {
                     Product p = oi.getProduct();
 
-                    List<ProductPhotoDto> photoDtos = p.getPhotos()
+                    List<ProductPhotoDto> photoDto = p.getPhotos()
                             .stream()
                             .map(photo -> new ProductPhotoDto(photo.getPhotoURL()))
                             .toList();
@@ -570,7 +584,7 @@ public class AdminServiceImpl implements AdminService {
                             p.getPrice(),
                             p.getOldPrice(),
                             p.getCatalog() != null ? p.getCatalog().getId() : null,
-                            photoDtos
+                            photoDto
                     );
                     return new OrderItemFullDto(productDto, oi.getQuantity());
                 })
@@ -605,11 +619,10 @@ public class AdminServiceImpl implements AdminService {
         // 1. Получаем список интерфейсов проекции
         List<PromotionFirstImageProjection> projections = promotionRepo.findPromotionsWithFirstPhotoNative();
 
-        // 2. Преобразуем его в целевой DTO
         return projections.stream()
                 .map(p -> new GetPromotionFirstImage(
-                        p.getPromotionId(),       // <- Используем геттер проекции
-                        p.getPromotionImages()    // <- Используем геттер проекции
+                        p.getPromotionId(),
+                        p.getPromotionImages()
                 ))
                 .toList();
     }
@@ -623,9 +636,7 @@ public class AdminServiceImpl implements AdminService {
         );
     }
 
-
     private GetPromotion toDtoPromotion(Promotion promotion) {
-
         // ⚠️ БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ ID КАТАЛОГА
         // Если getCatalog() вернет null, мы вернем null для catalogId, избегая NullPointerException.
         Integer catalogId = null;
@@ -644,8 +655,6 @@ public class AdminServiceImpl implements AdminService {
                 promotion.getId(),
                 promotion.getName(),
                 promotion.getDescription(),
-                // Примечание: Убедитесь, что promotion.getPhotos() не возвращает null,
-                // иначе потребуется дополнительная проверка или инициализация пустой коллекцией.
                 promotion.getPhotos()
                         .stream()
                         .map(photo -> new GetPhotoDto(
@@ -673,7 +682,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
     private GetProduct toDtoProduct(Product product) {
-        // Безопасное получение ID каталога
         Integer catalogId = null;
 
         // ⚠️ ПРОВЕРКА НА NULL: Если product.getCatalog() не null,
@@ -681,9 +689,6 @@ public class AdminServiceImpl implements AdminService {
         if (product.getCatalog() != null) {
             catalogId = product.getCatalog().getId();
         }
-
-        // В результате, если каталог отсутствует, в поле catalog_id
-        // вашего DTO будет передано null, а не произойдет сбой.
 
         return new GetProduct(
                 product.getId(),
@@ -699,7 +704,6 @@ public class AdminServiceImpl implements AdminService {
                                 photo.getPhotoURL()
                         ))
                         .toList(),
-                // Используем безопасно извлеченный ID
                 catalogId
         );
     }

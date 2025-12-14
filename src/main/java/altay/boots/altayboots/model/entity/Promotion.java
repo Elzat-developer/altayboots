@@ -24,6 +24,7 @@ public class Promotion {
     @Column(name = "end_date")
     private String endDate;
     @OneToMany(mappedBy = "promotion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderColumn(name = "photo_order_index")
     private List<ProductPhoto> photos = new ArrayList<>();
     @ManyToOne
     @JoinColumn(name = "catalogs_id",referencedColumnName = "id")

@@ -23,6 +23,7 @@ public class Product {
     @JoinColumn(name = "catalogs_id",referencedColumnName = "id")
     private Catalog catalog;
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderColumn(name = "photo_order_index")
     private List<ProductPhoto> photos = new ArrayList<>();
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Promotion> promotions;
