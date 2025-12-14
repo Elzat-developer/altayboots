@@ -116,10 +116,13 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // 3. Извлечение списка фото (здесь также лучше убедиться, что getPhotos() не null)
-        List<String> photoList = product.getPhotos() != null ?
+        List<GetPhotoDto> photoList = product.getPhotos() != null ?
                 product.getPhotos()
                         .stream()
-                        .map(ProductPhoto::getPhotoURL)
+                        .map(photo -> new GetPhotoDto(
+                                photo.getId(),
+                                photo.getPhotoURL()
+                        ))
                         .toList() :
                 Collections.emptyList(); // Используем Collections.emptyList() для безопасности
 
@@ -645,7 +648,10 @@ public class AdminServiceImpl implements AdminService {
                 // иначе потребуется дополнительная проверка или инициализация пустой коллекцией.
                 promotion.getPhotos()
                         .stream()
-                        .map(ProductPhoto::getPhotoURL)
+                        .map(photo -> new GetPhotoDto(
+                                photo.getId(),
+                                photo.getPhotoURL()
+                        ))
                         .toList(),
                 promotion.getPercentageDiscounted(),
                 promotion.isGlobal(),
@@ -688,7 +694,10 @@ public class AdminServiceImpl implements AdminService {
                 product.getOldPrice(),
                 product.getPhotos()
                         .stream()
-                        .map(ProductPhoto::getPhotoURL)
+                        .map(photo -> new GetPhotoDto(
+                                photo.getId(),
+                                photo.getPhotoURL()
+                        ))
                         .toList(),
                 // Используем безопасно извлеченный ID
                 catalogId

@@ -15,7 +15,7 @@ public record GetPromotion(
         String description,
 
         @Schema(description = "Список фото акции")
-        List<String> photos,
+        List<GetPhotoDto> photos,
 
         @Schema(description = "Размер скидки в процентах", example = "30")
         Integer percentageDiscounted,
