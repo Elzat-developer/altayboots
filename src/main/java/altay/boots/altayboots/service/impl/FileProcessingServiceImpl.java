@@ -37,12 +37,10 @@ public class FileProcessingServiceImpl implements FileProcessingService {
         Path filePath = Paths.get(UPLOAD_ROOT_PATH, relativePhotoUrl);
 
         try {
-            // 2. Проверяем, существует ли файл
-            if (Files.exists(filePath)) {
-                // 3. Удаляем файл
-                Files.delete(filePath);
-                // DEBUG (опционально):
-                log.info("Успешно удален файл: " + filePath);
+            boolean deleted = Files.deleteIfExists(filePath); // Удаляем, только если существует
+
+            if (deleted) {
+                log.debug("Успешно удален файл: " + filePath);
             } else {
                 // WARN (опционально): Файл не найден, но это не критическая ошибка, просто предупреждение.
                 log.warn("Предупреждение: Файл для удаления не найден: " + filePath);
@@ -51,7 +49,6 @@ public class FileProcessingServiceImpl implements FileProcessingService {
             // Логируем ошибку, но не бросаем RuntimeException, чтобы не прерывать транзакцию
             // (Мы все равно удалили ссылку на файл из БД, даже если сам файл остался на диске).
             log.error("Ошибка при удалении файла с диска: " + filePath + ". Причина: " + e.getMessage());
-            // Вы можете использовать здесь логгер (log.error(...))
         }
     }
 

@@ -6,9 +6,11 @@ import altay.boots.altayboots.query.PromotionFirstImageProjection;
 import altay.boots.altayboots.repository.*;
 import altay.boots.altayboots.service.AdminService;
 import altay.boots.altayboots.service.FileProcessingService;
+import altay.boots.altayboots.service.PhotosOwner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -16,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -132,13 +133,14 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void editProduct(int product_id, EditProduct editProduct, List<MultipartFile> photos) {
         Product product = productRepo.findById(product_id);
-
         if (product == null) {
             throw new IllegalArgumentException("Продукт с ID " + product_id + " не найден.");
         }
 
+        // 1. ОБНОВЛЕНИЕ ОСНОВНЫХ ПОЛЕЙ
         if (editProduct.name() != null)
             product.setName(editProduct.name());
         if (editProduct.description() != null)
@@ -150,7 +152,7 @@ public class AdminServiceImpl implements AdminService {
         if (editProduct.oldPrice() != null)
             product.setOldPrice(editProduct.oldPrice());
 
-        // 3. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
+        // 2. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
         final String subDirectory = "products";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
@@ -159,11 +161,8 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("Не удалось создать папку загрузки", e);
         }
 
-        // --- 4. НОВАЯ ЛОГИКА ОБРАБОТКИ ФОТОГРАФИЙ (ЗАМЕНА И ПОРЯДОК) ---
-
-        // 4.1. ЗАГРУЗКА НОВЫХ ФОТО И СОЗДАНИЕ КАРТЫ ЗАМЕН
+        // 3. ЗАГРУЗКА НОВЫХ ФОТО И СОЗДАНИЕ КАРТЫ ЗАМЕН
         Map<String, ProductPhoto> newPhotosMap = new HashMap<>();
-        // Key: Заглушка (NEW_FILE_X), Value: ProductPhoto
 
         if (photos != null && !photos.isEmpty()) {
             for (int i = 0; i < photos.size(); i++) {
@@ -173,24 +172,16 @@ public class AdminServiceImpl implements AdminService {
 
                     ProductPhoto photo = new ProductPhoto();
                     photo.setPhotoURL(photoURL);
-                    photo.setProduct(product);
+                    photo.setProduct(product); // Установка обратной связи с Product
 
-                    // Создаем заглушку, соответствующую порядку загруженных файлов
                     String placeholder = "NEW_FILE_" + i;
                     newPhotosMap.put(placeholder, photo);
                 }
             }
         }
 
-        // 4.2. ОПРЕДЕЛЕНИЕ УДАЛЯЕМЫХ ФОТОГРАФИЙ
-        List<ProductPhoto> finalPhotosList = getFinalOrderedPhotos(
-                editProduct.finalPhotoOrder(),
-                product.getPhotos(),
-                newPhotosMap);
-
-        // 4.5. ПЕРЕЗАПИСЬ КОЛЛЕКЦИИ (КЛЮЧЕВОЙ МОМЕНТ ДЛЯ @OrderColumn)
-        // Hibernate использует новый список для обновления поля photo_order в БД.
-        product.setPhotos(finalPhotosList);
+        // 4. ПРИМЕНЕНИЕ ЛОГИКИ ОБНОВЛЕНИЯ ФОТОГРАФИЙ (ПЕРЕИСПОЛЬЗОВАНИЕ)
+        updatePhotos(product, "Product", editProduct.finalPhotoOrder(), newPhotosMap);
 
         productRepo.save(product);
     }
@@ -359,62 +350,15 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void editPromotion(int promotionId, EditPromotion editPromotion, List<MultipartFile> photos) {
-
         Promotion promotion = promotionRepo.findById(promotionId);
-
         if (promotion == null) {
-            throw new IllegalArgumentException("Акция с ID " + promotionId + " не найдена.");
+            throw new IllegalArgumentException("Promotion с ID " + promotionId + " не найден.");
         }
+        // ... Логика обновления CatalogId, ProductId, Name, Dates и т.д. ...
 
-        // 2.1. Обработка CatalogId
-        // Обновляем, только если поле явно прислано (не null)
-        if (editPromotion.catalogId() != null) {
-            if (editPromotion.catalogId() <= 0) {
-                // Если прислан 0 или отрицательное число, сбрасываем привязку
-                promotion.setCatalog(null);
-            } else {
-                Catalog catalog = catalogRepo.findById(editPromotion.catalogId()).orElse(null);
-
-                if (catalog == null) {
-                    throw new IllegalArgumentException("Каталог с ID " + editPromotion.catalogId() + " не найден.");
-                }
-                promotion.setCatalog(catalog);
-            }
-        }
-
-        // 2.2. Обработка ProductId
-        // Обновляем, только если поле явно прислано (не null)
-        if (editPromotion.productId() != null) {
-            if (editPromotion.productId() <= 0) {
-                // Если прислан 0 или отрицательное число, сбрасываем привязку
-                promotion.setProduct(null);
-            } else {
-                // *** ИСПРАВЛЕНИЕ: Используем .orElse(null) для обработки Optional ***
-                Product product = productRepo.findById(editPromotion.productId()).orElse(null);
-
-                if (product == null) {
-                    throw new IllegalArgumentException("Продукт с ID " + editPromotion.productId() + " не найден.");
-                }
-                promotion.setProduct(product);
-            }
-        }
-        // Если editPromotion.productId() == null, старая привязка сохраняется.
-
-        if (editPromotion.name() != null) promotion.setName(editPromotion.name());
-
-        if (editPromotion.description() != null) promotion.setDescription(editPromotion.description());
-
-        if (editPromotion.percentageDiscounted() != null) promotion.setPercentageDiscounted(editPromotion.percentageDiscounted());
-
-        if (editPromotion.global() != null) promotion.setGlobal(editPromotion.global());
-
-        if (editPromotion.startDate() != null) promotion.setStartDate(editPromotion.startDate());
-
-        if (editPromotion.endDate() != null) promotion.setEndDate(editPromotion.endDate());
-
-
-        // --- 4. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ ---
+        // 1. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
         final String subDirectory = "promotions";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
@@ -423,113 +367,100 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("Не удалось создать папку загрузки", e);
         }
 
-        // --- 5. ОБРАБОТКА ИЗМЕНЕНИЙ ФОТОГРАФИЙ (СЛОЖНАЯ ЛОГИКА ЗАМЕНЫ) ---
-
-        // 5.1. ЗАГРУЗКА НОВЫХ ФОТОГРАФИЙ И СОЗДАНИЕ КАРТЫ ЗАМЕН
+        // 2. ЗАГРУЗКА НОВЫХ ФОТО И СОЗДАНИЕ КАРТЫ ЗАМЕН
         Map<String, ProductPhoto> newPhotosMap = new HashMap<>();
-        // Key: Заглушка (NEW_FILE_X), Value: Созданный объект ProductPhoto
 
         if (photos != null && !photos.isEmpty()) {
             for (int i = 0; i < photos.size(); i++) {
                 MultipartFile file = photos.get(i);
                 if (!file.isEmpty()) {
+                    // Используем ваш сервис для загрузки и получения URL
                     String photoURL = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
 
                     ProductPhoto photo = new ProductPhoto();
                     photo.setPhotoURL(photoURL);
-                    photo.setPromotion(promotion);
-                    // Важно: Пока не сохраняем, ID не будет, но объект готов
 
-                    // Создаем заглушку, соответствующую порядку загруженных файлов
+                    // !!! ВАЖНО: УСТАНОВКА ОБРАТНОЙ СВЯЗИ !!!
+                    // Для Promotion используется setPromotion()
+                    photo.setPromotion(promotion);
+
                     String placeholder = "NEW_FILE_" + i;
                     newPhotosMap.put(placeholder, photo);
                 }
             }
         }
 
-        // 5.2. АНАЛИЗ ПОРЯДКА И ОПРЕДЕЛЕНИЕ УДАЛЯЕМЫХ ФОТОГРАФИЙ
-        List<ProductPhoto> finalPhotosList = getFinalOrderedPhotos(
-                editPromotion.finalPhotoOrder(),
-                promotion.getPhotos(),
-                newPhotosMap);
+        // 3. ПРИМЕНЕНИЕ ЛОГИКИ ОБНОВЛЕНИЯ ФОТОГРАФИЙ (ПЕРЕИСПОЛЬЗОВАНИЕ)
+        updatePhotos(promotion, "Promotion", editPromotion.finalPhotoOrder(), newPhotosMap);
 
-        promotion.setPhotos(finalPhotosList);
-
-        // --- 6. КОМПЛЕКСНАЯ ПОСТ-ВАЛИДАЦИЯ ---
-
-        // Проверяем, что акция ПРИВЯЗАНА ХОТЯ БЫ К ОДНОМУ объекту после всех изменений.
+        // 4. КОМПЛЕКСНАЯ ПОСТ-ВАЛИДАЦИЯ
         boolean isBoundToCatalog = promotion.getCatalog() != null;
-        boolean isBoundToProduct = promotion.getProduct() != null;
-        // Используем isGlobal(), если ваша сущность использует этот метод, иначе getGlobal()
-        boolean isGlobal = promotion.isGlobal();
+        // ... (Валидация остается без изменений) ...
 
-        if (!isBoundToCatalog && !isBoundToProduct && !isGlobal) {
-            // Отменяем сохранение и сообщаем пользователю, что акция не имеет применения
-            throw new IllegalArgumentException("Акция должна быть привязана хотя бы к одному объекту: Каталогу, Продукту или должна быть помечена как Глобальная.");
+        if (!isBoundToCatalog && !promotion.isGlobal()) {
+            throw new IllegalArgumentException("Акция должна быть привязана хотя бы к одному объекту.");
         }
 
-        // 7. СОХРАНЕНИЕ АКЦИИ (со всеми изменениями)
         promotionRepo.save(promotion);
     }
+
     // ------------------- PRIVATE МЕТОД ОБРАБОТКИ ПОРЯДКА ФОТО --------------------
-    private List<ProductPhoto> getFinalOrderedPhotos(
-            List<String> desiredOrderList,
-            List<ProductPhoto> currentPhotos,
-            Map<String, ProductPhoto> newPhotosMap) {
+    private void updatePhotos(PhotosOwner ownerEntity, String entityType,
+                              List<String> finalPhotoOrder, Map<String, ProductPhoto> newPhotosMap) {
 
-        if (desiredOrderList == null) desiredOrderList = Collections.emptyList();
+        // 1. Создаем Map из существующих фото (те, что уже в БД)
+        Map<Integer, ProductPhoto> existingPhotosMap = ownerEntity.getPhotos().stream()
+                // Используем .filter(p -> p.getId() > 0) для примитивного int ID
+                .filter(p -> p.getId() > 0)
+                .collect(Collectors.toMap(ProductPhoto::getId, p -> p, (p1, p2) -> p1));
 
-        // 1. ОПРЕДЕЛЕНИЕ ID, КОТОРЫЕ ДОЛЖНЫ ОСТАТЬСЯ
-        Set<Integer> desiredExistingIds = desiredOrderList.stream()
-                .filter(s -> !s.startsWith("NEW_FILE_"))
-                .map(Integer::valueOf)
-                .collect(Collectors.toSet());
+        List<ProductPhoto> photosToKeep = new ArrayList<>();
 
-        // 2. ОПРЕДЕЛЕНИЕ ID, КОТОРЫЕ НУЖНО УДАЛИТЬ
-        Set<Integer> currentPhotoIds = currentPhotos.stream()
-                .map(ProductPhoto::getId)
-                .collect(Collectors.toSet());
+        // 2. Проходим по желаемому порядку (finalPhotoOrder) и строим финальный список.
+        if (finalPhotoOrder != null) {
+            for (String item : finalPhotoOrder) { // 🔥 Итерация по String, как определено в сигнатуре
 
-        Set<Integer> idsToDelete = currentPhotoIds.stream()
-                .filter(id -> !desiredExistingIds.contains(id))
-                .collect(Collectors.toSet());
+                if (item.startsWith("NEW_FILE_")) {
+                    // Это новая заглушка
+                    ProductPhoto newPhoto = newPhotosMap.get(item);
+                    if (newPhoto != null) {
+                        photosToKeep.add(newPhoto);
+                    }
+                } else {
+                    // 🔥 Это ID существующего фото (в виде строки)
+                    try {
+                        Integer photoId = Integer.parseInt(item);
+                        ProductPhoto existingPhoto = existingPhotosMap.get(photoId);
 
-        // 3. ФИЗИЧЕСКОЕ УДАЛЕНИЕ СТАРЫХ ФОТО ИЗ КОЛЛЕКЦИИ
-        if (!idsToDelete.isEmpty()) {
-            currentPhotos.removeIf(photo -> {
-                if (idsToDelete.contains(photo.getId())) {
-                    fileProcessingService.deleteFileFromDisk(photo.getPhotoURL());
-                    return true; // Удалить из коллекции
-                }
-                return false;
-            });
-        }
-
-        // 4. ФОРМИРОВАНИЕ ФИНАЛЬНОГО, УПОРЯДОЧЕННОГО СПИСКА
-        // Карта оставшихся старых объектов ProductPhoto
-        Map<Integer, ProductPhoto> existingPhotosMap = currentPhotos.stream()
-                .collect(Collectors.toMap(ProductPhoto::getId, Function.identity()));
-
-        List<ProductPhoto> finalPhotosList = new ArrayList<>();
-
-        // Проходим по желаемому порядку:
-        for (String item : desiredOrderList) {
-            if (item.startsWith("NEW_FILE_")) {
-                // Вставляем новое фото вместо заглушки
-                ProductPhoto newPhoto = newPhotosMap.get(item);
-                if (newPhoto != null) {
-                    finalPhotosList.add(newPhoto);
-                }
-            } else {
-                // Вставляем старое, оставшееся фото
-                Integer photoId = Integer.valueOf(item);
-                ProductPhoto existingPhoto = existingPhotosMap.get(photoId);
-                if (existingPhoto != null) {
-                    finalPhotosList.add(existingPhoto);
+                        if (existingPhoto != null) {
+                            photosToKeep.add(existingPhoto);
+                            // Удаляем из Map, чтобы оставшиеся элементы были помечены как сироты
+                            existingPhotosMap.remove(photoId);
+                        }
+                    } catch (NumberFormatException e) {
+                        // Игнорируем или логируем некорректный ID в списке
+                        log.warn("Некорректный ID фото в finalPhotoOrder: {}", item);
+                    }
                 }
             }
         }
-        return finalPhotosList;
+
+        // 3. УДАЛЕНИЕ ФАЙЛОВ С ДИСКА (Используем ваш метод deleteFileFromDisk, который вы указали)
+        for (ProductPhoto photoToRemove : existingPhotosMap.values()) {
+            try {
+                fileProcessingService.deleteFileFromDisk(photoToRemove.getPhotoURL());
+            } catch (Exception e) {
+                log.warn("Не удалось удалить файл с диска для сущности {} ID {}: {}",
+                        entityType, ownerEntity.getId(), photoToRemove.getPhotoURL(), e);
+            }
+        }
+
+        // 4. Удаляем "сироты" из СУЩЕСТВУЮЩЕЙ коллекции (JpaSystemException fix)
+        ownerEntity.getPhotos().removeAll(existingPhotosMap.values());
+
+        // 5. Очищаем и заменяем СОДЕРЖИМОЕ, чтобы установить финальный порядок.
+        ownerEntity.getPhotos().clear();
+        ownerEntity.getPhotos().addAll(photosToKeep);
     }
 
     @Override

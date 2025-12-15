@@ -1,5 +1,6 @@
 package altay.boots.altayboots.model.entity;
 
+import altay.boots.altayboots.service.PhotosOwner;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -9,7 +10,7 @@ import java.util.List;
 @Entity
 @Data
 @Table(name = "products")
-public class Product {
+public class Product implements PhotosOwner {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
