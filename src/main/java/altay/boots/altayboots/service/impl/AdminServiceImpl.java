@@ -356,7 +356,50 @@ public class AdminServiceImpl implements AdminService {
         if (promotion == null) {
             throw new IllegalArgumentException("Promotion с ID " + promotionId + " не найден.");
         }
-        // ... Логика обновления CatalogId, ProductId, Name, Dates и т.д. ...
+        // --- 2. ОБНОВЛЕНИЕ ОСНОВНЫХ ПОЛЕЙ И ПРИВЯЗОК ---
+
+        // 2.1. ОБНОВЛЕНИЕ ПРИВЯЗКИ К КАТАЛОГУ (CatalogId)
+        if (editPromotion.catalogId() != null) {
+            if (editPromotion.catalogId() <= 0) {
+                promotion.setCatalog(null); // Сброс привязки
+            } else {
+                Catalog catalog = catalogRepo.findById(editPromotion.catalogId())
+                        .orElseThrow(() -> new IllegalArgumentException("Каталог с ID " + editPromotion.catalogId() + " не найден."));
+                promotion.setCatalog(catalog);
+            }
+        }
+
+        // 2.2. ОБНОВЛЕНИЕ ПРИВЯЗКИ К ПРОДУКТУ (ProductId)
+        if (editPromotion.productId() != null) {
+            if (editPromotion.productId() <= 0) {
+                promotion.setProduct(null); // Сброс привязки
+            } else {
+                Product product = productRepo.findById(editPromotion.productId())
+                        .orElseThrow(() -> new IllegalArgumentException("Продукт с ID " + editPromotion.productId() + " не найден."));
+                promotion.setProduct(product);
+            }
+        }
+
+        // 2.3. ОБНОВЛЕНИЕ ПРОСТЫХ ПОЛЕЙ
+        if (editPromotion.name() != null) promotion.setName(editPromotion.name());
+        if (editPromotion.description() != null) promotion.setDescription(editPromotion.description());
+
+        if (editPromotion.percentageDiscounted() != null) {
+            int discount = editPromotion.percentageDiscounted();
+            if (discount < 1 || discount > 100) {
+                throw new IllegalArgumentException("Скидка должна быть в диапазоне от 1 до 100 процентов.");
+            }
+            promotion.setPercentageDiscounted(discount);
+        }
+
+        if (editPromotion.global() != null) promotion.setGlobal(editPromotion.global());
+
+        if (editPromotion.startDate() != null) {
+            promotion.setStartDate(editPromotion.startDate());
+        }
+        if (editPromotion.endDate() != null) {
+            promotion.setEndDate(editPromotion.endDate());
+        }
 
         // 1. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
         final String subDirectory = "promotions";
@@ -379,9 +422,6 @@ public class AdminServiceImpl implements AdminService {
 
                     ProductPhoto photo = new ProductPhoto();
                     photo.setPhotoURL(photoURL);
-
-                    // !!! ВАЖНО: УСТАНОВКА ОБРАТНОЙ СВЯЗИ !!!
-                    // Для Promotion используется setPromotion()
                     photo.setPromotion(promotion);
 
                     String placeholder = "NEW_FILE_" + i;
@@ -393,12 +433,14 @@ public class AdminServiceImpl implements AdminService {
         // 3. ПРИМЕНЕНИЕ ЛОГИКИ ОБНОВЛЕНИЯ ФОТОГРАФИЙ (ПЕРЕИСПОЛЬЗОВАНИЕ)
         updatePhotos(promotion, "Promotion", editPromotion.finalPhotoOrder(), newPhotosMap);
 
-        // 4. КОМПЛЕКСНАЯ ПОСТ-ВАЛИДАЦИЯ
+        // Проверяем, что акция ПРИВЯЗАНА ХОТЯ БЫ К ОДНОМУ объекту после всех изменений.
         boolean isBoundToCatalog = promotion.getCatalog() != null;
-        // ... (Валидация остается без изменений) ...
+        boolean isBoundToProduct = promotion.getProduct() != null;
+        boolean isGlobal = promotion.isGlobal();
 
-        if (!isBoundToCatalog && !promotion.isGlobal()) {
-            throw new IllegalArgumentException("Акция должна быть привязана хотя бы к одному объекту.");
+        if (!isBoundToCatalog && !isBoundToProduct && !isGlobal) {
+            // Отменяем сохранение и сообщаем пользователю, что акция не имеет применения
+            throw new IllegalArgumentException("Акция должна быть привязана хотя бы к одному объекту: Каталогу, Продукту или должна быть помечена как Глобальная.");
         }
 
         promotionRepo.save(promotion);
