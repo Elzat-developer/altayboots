@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface PhotosOwner {
     List<ProductPhoto> getPhotos();
-    Integer getId(); // Для логгирования
+    int getId(); // Для логгирования
 }
