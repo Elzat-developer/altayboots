@@ -4,8 +4,7 @@ import altay.boots.altayboots.service.PhotosOwner;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Entity
 @Data
@@ -20,6 +19,13 @@ public class Product implements PhotosOwner {
     private int price;
     @Column(name = "old_price")
     private int oldPrice;
+    @ElementCollection
+    @CollectionTable(
+            name = "product_sizes",
+            joinColumns = @JoinColumn(name = "products_id")
+    )
+    @Column(name = "size_value")
+    private Set<String> sizes = new TreeSet<>();
     @ManyToOne
     @JoinColumn(name = "catalogs_id",referencedColumnName = "id")
     private Catalog catalog;

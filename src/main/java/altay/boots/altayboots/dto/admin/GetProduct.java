@@ -3,6 +3,7 @@ package altay.boots.altayboots.dto.admin;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
+import java.util.Set;
 
 @Schema(description = "Информация о продукте")
 public record GetProduct(
@@ -25,6 +26,8 @@ public record GetProduct(
 
         @Schema(description = "Список URL фотографий продукта")
         List<GetPhotoDto> photos,
+        @Schema(description = "Размеры", example = "[\"38\", \"39\", \"40\"]...")
+        Set<String> sizes,
 
         @Schema(description = "ID каталога, к которому принадлежит продукт", example = "2")
         Integer catalog_id

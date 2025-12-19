@@ -16,4 +16,15 @@ public class Company {
     private String photoURL;
     private String base;
     private String city;
+    private String street;
+    private String email;
+    private String phone;
+    @Column(name = "job_start")
+    private String jobStart;
+    @Column(name = "job_end")
+    private String jobEnd;
+    @Column(name = "free_start")
+    private String freeStart;
+    @Column(name = "free_end")
+    private String freeEnd;
 }

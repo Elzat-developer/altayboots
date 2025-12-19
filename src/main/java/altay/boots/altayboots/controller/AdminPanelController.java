@@ -105,7 +105,6 @@ public class AdminPanelController {
     @PutMapping(value = "/edit-company", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> editCompany(
             @ModelAttribute CreateCompanyDescription companyDescription,
-
             @Parameter(description = "Новое фото", required = false)
             @RequestPart(value = "photo", required = false) MultipartFile photo
     ) {

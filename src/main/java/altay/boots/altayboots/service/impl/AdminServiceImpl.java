@@ -45,11 +45,24 @@ public class AdminServiceImpl implements AdminService {
 
         // --- ИНИЦИАЛИЗАЦИЯ ПРОДУКТА ---
         Product product = new Product();
-        product.setName(createProduct.name());
-        product.setDescription(createProduct.description());
-        product.setText(createProduct.text());
-        product.setPrice(createProduct.price());
-        product.setOldPrice(createProduct.oldPrice());
+        if (createProduct.name() != null) {
+            product.setName(createProduct.name());
+        }
+        if (createProduct.description() != null) {
+            product.setDescription(createProduct.description());
+        }
+        if (createProduct.text() != null) {
+            product.setText(createProduct.text());
+        }
+        if (createProduct.price() != null) {
+            product.setPrice(createProduct.price());
+        }
+        if (createProduct.oldPrice() != null) {
+            product.setOldPrice(createProduct.oldPrice());
+        }
+        if (createProduct.sizes() != null) {
+            product.setSizes(createProduct.sizes());
+        }
 
         product.setCatalog(catalog);
 
@@ -128,6 +141,7 @@ public class AdminServiceImpl implements AdminService {
                 product.getPrice(),
                 product.getOldPrice(),
                 photoList,
+                product.getSizes(),
                 catalogId
         );
     }
@@ -151,7 +165,8 @@ public class AdminServiceImpl implements AdminService {
             product.setPrice(editProduct.price());
         if (editProduct.oldPrice() != null)
             product.setOldPrice(editProduct.oldPrice());
-
+        if (editProduct.sizes() != null)
+            product.setSizes(editProduct.sizes());
         // 2. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
         final String subDirectory = "products";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
@@ -242,17 +257,53 @@ public class AdminServiceImpl implements AdminService {
                 company.getText(),
                 company.getPhotoURL(),
                 company.getBase(),
-                company.getCity()
+                company.getCity(),
+                company.getStreet(),
+                company.getEmail(),
+                company.getPhone(),
+                company.getJobStart(),
+                company.getJobEnd(),
+                company.getFreeStart(),
+                company.getFreeEnd()
         );
     }
 
     @Override
     public void editCompany(CreateCompanyDescription companyDescription,MultipartFile photo) {
         Company company = companyRepo.findById(1);
-
-        company.setName(companyDescription.name());
-        company.setText(companyDescription.text());
-
+        if (companyDescription.name() != null) {
+            company.setName(companyDescription.name());
+        }
+        if (companyDescription.text() != null) {
+            company.setText(companyDescription.text());
+        }
+        if (companyDescription.base() != null){
+            company.setBase(companyDescription.base());
+        }
+        if (companyDescription.city() != null){
+            company.setCity(companyDescription.city());
+        }
+        if (companyDescription.street() != null){
+            company.setStreet(companyDescription.street());
+        }
+        if (companyDescription.email() != null){
+            company.setEmail(companyDescription.email());
+        }
+        if (companyDescription.phone() != null){
+            company.setPhone(companyDescription.phone());
+        }
+        if (companyDescription.jobStart() != null){
+            company.setJobStart(companyDescription.jobStart());
+        }
+        if (companyDescription.jobEnd() != null){
+            company.setJobEnd(companyDescription.jobEnd());
+        }
+        if (companyDescription.freeStart() != null){
+            company.setFreeStart(companyDescription.freeStart());
+        }
+        if (companyDescription.freeEnd() != null){
+            company.setFreeEnd(companyDescription.freeEnd());
+        }
         final String subDirectory = "company";
         Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
         try {
@@ -274,9 +325,6 @@ public class AdminServiceImpl implements AdminService {
             company.setPhotoURL(photoURL);
             log.info("✅ Фото успешно сохранено: {}", photoURL);
         }
-
-        company.setBase(companyDescription.base());
-        company.setCity(companyDescription.city());
 
         companyRepo.save(company);
     }
@@ -677,6 +725,7 @@ public class AdminServiceImpl implements AdminService {
                                 photo.getPhotoURL()
                         ))
                         .toList(),
+                product.getSizes(),
                 catalogId
         );
     }
