@@ -648,6 +648,44 @@ public class AdminServiceImpl implements AdminService {
                 .toList();
     }
 
+    @Override
+    public GetProductPhotos getProductsPhotos(Integer productId) {
+        Product product = productRepo.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product с ID " + productId + " не найден."));
+
+        List<GetPhotoDto> photoDtoList = product.getPhotos()
+                .stream()
+                .map(productPhoto -> new GetPhotoDto(
+                        productPhoto.getId(),
+                        productPhoto.getPhotoURL()
+                ))
+                .toList();
+
+        return new GetProductPhotos(
+                product.getId(),
+                photoDtoList
+        );
+    }
+
+    @Override
+    public GetProductPhotos getPromotionsPhotos(Integer promotionId) {
+        Promotion promotion = promotionRepo.findById(promotionId)
+                .orElseThrow(() -> new IllegalArgumentException("Promotion с ID " + promotionId + " не найден."));
+
+        List<GetPhotoDto> photoDtoList = promotion.getPhotos()
+                .stream()
+                .map(productPhoto -> new GetPhotoDto(
+                        productPhoto.getId(),
+                        productPhoto.getPhotoURL()
+                ))
+                .toList();
+
+        return new GetProductPhotos(
+                promotion.getId(),
+                photoDtoList
+        );
+    }
+
     private GetAdminOrderSimple toDtoOrders(Order order) {
         return new GetAdminOrderSimple(
                 order.getId(),

@@ -78,6 +78,12 @@ public class AuthenticationController {
     public ResponseEntity<List<GetProduct>> getProducts() {
         return ResponseEntity.ok(adminService.getProducts());
     }
+    @Operation(summary = "Получить продукт и именно его фото")
+    @ApiResponse(responseCode = "200", description = "Продукт и его фото успешно получены")
+    @GetMapping("/products/{product_id}/photos")
+    public ResponseEntity<GetProductPhotos> getProductsPhotos(@PathVariable Integer product_id) {
+        return ResponseEntity.ok(adminService.getProductsPhotos(product_id));
+    }
 
     @Operation(summary = "Получить продукт по ID")
     @ApiResponses({
@@ -118,6 +124,12 @@ public class AuthenticationController {
     @GetMapping("/promotions")
     public ResponseEntity<List<GetPromotion>> getPromotions() {
         return ResponseEntity.ok(adminService.getPromotions());
+    }
+    @Operation(summary = "Получить акцию и именно его фото")
+    @ApiResponse(responseCode = "200", description = "Акцию и его фото успешно получены")
+    @GetMapping("/promotions/{promotion_id}/photos")
+    public ResponseEntity<GetProductPhotos> getPromotionsPhotos(@PathVariable Integer promotion_id) {
+        return ResponseEntity.ok(adminService.getPromotionsPhotos(promotion_id));
     }
     @Operation(summary = "Получить акцию по ID")
     @GetMapping("/promotion/{promotion_id}")

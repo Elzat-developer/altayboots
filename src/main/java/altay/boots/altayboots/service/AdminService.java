@@ -49,4 +49,8 @@ public interface AdminService {
     void deleteOrder(Integer orderId);
 
     List<GetPromotionFirstImage> getPromotionFirstImage();
+
+    GetProductPhotos getProductsPhotos(Integer productId);
+
+    GetProductPhotos getPromotionsPhotos(Integer promotionId);
 }
