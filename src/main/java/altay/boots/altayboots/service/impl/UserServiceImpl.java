@@ -1,5 +1,6 @@
 package altay.boots.altayboots.service.impl;
 
+import altay.boots.altayboots.dto.admin.GetPhotoDto;
 import altay.boots.altayboots.dto.status.PaidStatus;
 import altay.boots.altayboots.dto.user.*;
 import altay.boots.altayboots.model.entity.*;
@@ -344,6 +345,13 @@ public class UserServiceImpl implements UserService {
                 product.getId(),
                 product.getName(),
                 product.getPrice(),
+                product.getPhotos()
+                        .stream()
+                        .map(photo -> new GetPhotoDto(
+                                photo.getId(),
+                                photo.getPhotoURL()
+                        ))
+                        .toList(),
                 catalogName
         );
     }
