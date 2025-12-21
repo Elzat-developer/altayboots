@@ -7,6 +7,7 @@ import altay.boots.altayboots.repository.*;
 import altay.boots.altayboots.service.AdminService;
 import altay.boots.altayboots.service.FileProcessingService;
 import altay.boots.altayboots.service.PhotosOwner;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class AdminServiceImpl implements AdminService {
     private final PromotionRepo promotionRepo;
     private final OrderRepo orderRepo;
     private final FileProcessingService fileProcessingService;
+    private final CartItemRepository cartItemRepository;
 
     // --- КОНСТАНТА ДЛЯ КОРНЕВОЙ ПАПКИ ЗАГРУЗКИ ---
     private static final String UPLOAD_ROOT_PATH = "C:/uploads";
@@ -65,7 +67,7 @@ public class AdminServiceImpl implements AdminService {
         }
 
         product.setCatalog(catalog);
-
+        product.setActive(true);
         // Первое сохранение для получения ID продукта,
         productRepo.save(product);
 
@@ -202,8 +204,13 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void deleteProduct(Integer productId) {
-        productRepo.deleteById(productId);
+        Product product = productRepo.findById(productId)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+        cartItemRepository.deleteByProductId(productId);
+        product.setActive(false);
+        productRepo.save(product);
     }
 
     @Override

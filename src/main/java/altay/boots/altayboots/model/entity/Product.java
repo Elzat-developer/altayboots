@@ -3,12 +3,14 @@ package altay.boots.altayboots.model.entity;
 import altay.boots.altayboots.service.PhotosOwner;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.Where;
 
 import java.util.*;
 
 @Entity
 @Data
 @Table(name = "products")
+@Where(clause = "active = true")
 public class Product implements PhotosOwner {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,6 +28,8 @@ public class Product implements PhotosOwner {
     )
     @Column(name = "size_value")
     private Set<String> sizes = new TreeSet<>();
+    @Column(name = "active", nullable = false)
+    private boolean active = true;
     @ManyToOne
     @JoinColumn(name = "catalogs_id",referencedColumnName = "id")
     private Catalog catalog;
