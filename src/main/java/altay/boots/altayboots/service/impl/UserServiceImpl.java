@@ -163,6 +163,7 @@ public class UserServiceImpl implements UserService {
                     "Данные об этом продукте больше не доступны.",
                     0,
                     null,
+                    false,
                     null,
                     List.of() // Пустой список фото
             );
@@ -176,6 +177,7 @@ public class UserServiceImpl implements UserService {
                 product.getDescription(),
                 product.getPrice(),
                 product.getOldPrice(),
+                product.isActive(),
                 catalogName,
                 product.getPhotos().stream().map(this::toDtoPhoto).toList()
         );
@@ -352,6 +354,7 @@ public class UserServiceImpl implements UserService {
                                 photo.getPhotoURL()
                         ))
                         .toList(),
+                product.isActive(),
                 catalogName
         );
     }

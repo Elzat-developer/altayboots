@@ -8,6 +8,7 @@ public record DetailedOrderProductDTO(
         String description,
         Integer price,
         Integer oldPrice,
+        Boolean active,
         String catalogName, // Предполагаем, что вам нужно только имя каталога
         List<ProductPhotoDTO> photos
 ) {

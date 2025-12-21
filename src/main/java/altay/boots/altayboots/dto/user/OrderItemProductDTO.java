@@ -11,6 +11,7 @@ public record OrderItemProductDTO(
         Integer productPrice, // Используйте тип, соответствующий полю 'price' в вашей сущности Product
         @Schema(description = "Список URL фотографий продукта")
         List<GetPhotoDto> photos,
+        Boolean active,
         String catalogName
 ) {
 }
