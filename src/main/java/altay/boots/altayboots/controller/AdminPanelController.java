@@ -36,20 +36,21 @@ public class AdminPanelController {
     ) {
         return ResponseEntity.ok(adminService.getOrder(order_id));
     }
+    @Operation(summary = "Получить все загруженные фотографии")
+    @GetMapping("/photos")
+    public ResponseEntity<List<GetPhotoDto>> getAllPhotos() {
+        return ResponseEntity.ok(adminService.getAllPhotos());
+    }
 
     // --------------------- CREATE ------------------------
 
-    @Operation(
-            summary = "Создать продукт",
-            description = "Передай данные продукта + список фото"
-    )
-    @PostMapping(value = "/create-product", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Создать продукта")
+    @PostMapping("/create-product")
     public ResponseEntity<String> createProduct(
-            @ModelAttribute CreateProduct createProduct,
-            @Parameter(description = "Фото продукта")
-            @RequestPart("photos") List<MultipartFile> photos
+            @RequestBody CreateProduct createProduct,
+            @RequestParam(required = false) List<Integer> photoIds
     ) {
-        adminService.createProduct(createProduct, photos);
+        adminService.createProduct(createProduct, photoIds);
         return new ResponseEntity<>("Product successfully created!", HttpStatus.CREATED);
     }
 
@@ -63,31 +64,32 @@ public class AdminPanelController {
     }
 
     @Operation(summary = "Создать акцию")
-    @PostMapping(value = "/create-promotion", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/create-promotion")
     public ResponseEntity<String> createPromotion(
-            @ModelAttribute CreatePromotion createPromotion,
-            @Parameter(description = "Фото акции")
-            @RequestPart("photos") List<MultipartFile> photos
+            @RequestBody CreatePromotion createPromotion,
+            @RequestParam(required = false) List<Integer> photoIds
     ) {
-        adminService.createPromotion(createPromotion, photos);
-        return new ResponseEntity<>("Promotion successfully created!", HttpStatus.CREATED);
+        adminService.createPromotion(createPromotion, photoIds);
+        return new ResponseEntity<>("Promotion created!", HttpStatus.CREATED);
+    }
+    @Operation(summary = "Загрузить фотографии (без привязки)")
+    @PostMapping(value = "/create-photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> createPhotos(@RequestPart("photos") List<MultipartFile> photos) {
+        adminService.createPhotos(photos);
+        return new ResponseEntity<>("Photos uploaded successfully", HttpStatus.CREATED);
     }
 
     // --------------------- EDIT ------------------------
 
     @Operation(summary = "Редактировать продукт")
-    @PutMapping(value = "/edit-product/{product_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping("/edit-product/{product_id}")
     public ResponseEntity<String> editProduct(
-            @Parameter(description = "ID продукта")
             @PathVariable Integer product_id,
-
-            @ModelAttribute EditProduct editProduct,
-
-            @Parameter(description = "Новые фото", required = false)
-            @RequestPart(value = "photos", required = false) List<MultipartFile> photos
+            @RequestBody EditProduct editProduct,
+            @RequestParam(required = false) List<Integer> photoIds
     ) {
-        adminService.editProduct(product_id, editProduct, photos);
-        return new ResponseEntity<>("Product edit success!", HttpStatus.OK);
+        adminService.editProduct(product_id, editProduct, photoIds);
+        return ResponseEntity.ok("Product updated");
     }
 
     @Operation(summary = "Редактировать каталог")
@@ -101,29 +103,26 @@ public class AdminPanelController {
         return new ResponseEntity<>("Catalog edit success!", HttpStatus.OK);
     }
 
-    @Operation(summary = "Редактировать информацию о компании")
-    @PutMapping(value = "/edit-company", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Редактировать компанию")
+    @PutMapping("/edit-company")
     public ResponseEntity<String> editCompany(
-            @ModelAttribute CreateCompanyDescription companyDescription,
-            @Parameter(description = "Новое фото", required = false)
-            @RequestPart(value = "photo", required = false) MultipartFile photo
+            @RequestBody CreateCompanyDescription description,
+            @RequestParam(required = false) Integer photoId
     ) {
-        adminService.editCompany(companyDescription, photo);
-        return new ResponseEntity<>("Company edit success!", HttpStatus.OK);
+        adminService.editCompany(description, photoId);
+        return ResponseEntity.ok("Company updated");
     }
 
     @Operation(summary = "Редактировать акцию")
-    @PutMapping(value = "/edit-promotion/{promotion_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/edit-promotion/{promotion_id}")
     public ResponseEntity<String> editPromotion(
             @Parameter(description = "ID акции")
             @PathVariable Integer promotion_id,
-
-            @ModelAttribute EditPromotion editPromotion,
-
+            @RequestBody EditPromotion editPromotion,
             @Parameter(description = "Новые фото", required = false)
-            @RequestPart(value = "photos", required = false) List<MultipartFile> photos
+            @RequestParam(required = false) List<Integer> photoIds
     ) {
-        adminService.editPromotion(promotion_id, editPromotion, photos);
+        adminService.editPromotion(promotion_id, editPromotion, photoIds);
         return new ResponseEntity<>("Promotion edit success!", HttpStatus.OK);
     }
 
@@ -137,7 +136,12 @@ public class AdminPanelController {
         adminService.editOrder(order_id, editOrder);
         return new ResponseEntity<>("Order edit success!", HttpStatus.OK);
     }
-
+    @Operation(summary = "Заменить файл фотографии по ID")
+    @PutMapping(value = "/edit-photo/{photo_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> editPhoto(@PathVariable Integer photo_id, @RequestPart("photo") MultipartFile photo) {
+        adminService.editPhoto(photo_id, photo);
+        return ResponseEntity.ok("Photo updated");
+    }
     // --------------------- DELETE ------------------------
 
     @Operation(summary = "Удалить продукт")
@@ -178,6 +182,12 @@ public class AdminPanelController {
     ) {
         adminService.deleteOrder(order_id);
         return new ResponseEntity<>("Order delete success!", HttpStatus.OK);
+    }
+    @Operation(summary = "Удалить фотографию (совсем)")
+    @DeleteMapping("/delete-photo/{photo_id}")
+    public ResponseEntity<String> deletePhoto(@PathVariable Integer photo_id) {
+        adminService.deletePhoto(photo_id);
+        return ResponseEntity.ok("Photo deleted");
     }
 }
 

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -34,71 +35,75 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public Integer createOrder(CreateOrder createOrder) {
-        // 1. Получаем текущего аутентифицированного пользователя
         User user = getContextUser();
 
-        // 2. Обновление данных пользователя с проверкой на null (Ваш код)
-        // Это гарантирует, что существующие данные не будут перезаписаны null
-        if (createOrder.surName() != null) { user.setSurName(createOrder.surName()); }
-        if (createOrder.lastName() != null) { user.setLastName(createOrder.lastName()); }
-        if (createOrder.region() != null) { user.setRegion(createOrder.region()); }
-        if (createOrder.cityOrDistrict() != null) { user.setCityOrDistrict(createOrder.cityOrDistrict()); }
-        if (createOrder.street()!= null) { user.setStreet(createOrder.street()); }
-        if (createOrder.houseOrApartment() != null) { user.setHouseOrApartment(createOrder.houseOrApartment()); }
-        if (createOrder.index() != null) { user.setIndexPost(createOrder.index()); }
-        // 2. Ищем корзину пользователя
+        // 1. Обновление профиля пользователя
+        updateUserProfile(user, createOrder);
+
+        // 2. Поиск корзины
         Cart cart = cartRepo.findByUser(user);
-        if (cart == null || cart.getItems().isEmpty()) { // Проверяем, что корзина существует и не пуста
-            throw new RuntimeException("Cannot create order: The cart is empty.");
+        if (cart == null || cart.getItems().isEmpty()) {
+            throw new RuntimeException("Корзина пуста. Нечего оформлять.");
         }
 
-        // 3. Получаем все позиции из корзины
-        // Лучше использовать cartItemRepo.findByCart(cart) или даже fetch-запрос,
-        // чтобы сразу загрузить продукт.
-        List<CartItem> cartItems = cart.getItems();
+        // 3. Разделяем товары на "живые" и "удаленные" (из-за Soft Delete)
+        List<CartItem> allItems = cart.getItems();
+        List<CartItem> validItems = allItems.stream()
+                .filter(i -> i.getProduct() != null)
+                .toList();
 
-        // 4. Создаем новый заказ
+        List<CartItem> deletedItems = allItems.stream()
+                .filter(i -> i.getProduct() == null)
+                .toList();
+
+        // 4. Если в процессе оформления нашлись удаленные товары:
+        if (!deletedItems.isEmpty()) {
+            cartItemRepo.deleteAll(deletedItems); // Чистим корзину от "мусора"
+
+            // Если ПОСЛЕ чистки живых товаров не осталось - выходим
+            if (validItems.isEmpty()) {
+                throw new RuntimeException("К сожалению, все товары в вашей корзине более недоступны.");
+            }
+
+            // Опционально: можно прервать процесс и попросить пользователя проверить корзину еще раз
+            // throw new RuntimeException("Некоторые товары стали недоступны. Мы обновили вашу корзину, проверьте её ещё раз.");
+        }
+
+        // 5. Создаем заказ только из валидных товаров
         Order order = new Order();
         order.setOrderStartDate(LocalDateTime.now());
-        order.setPaidStatus(PaidStatus.NOTPAY); // Или PaidStatus.PENDING, в зависимости от логики
+        order.setPaidStatus(PaidStatus.NOTPAY);
         order.setUser(user);
 
         List<OrderItem> orderItems = new ArrayList<>();
-
-        // 5. Перенос позиций из корзины в OrderItem
-        for (CartItem cartItem : cartItems) {
-
-            // Проверка наличия продукта
-            Product product = cartItem.getProduct(); // Продукт уже должен быть загружен/связан
-
-            if (product == null) {
-                // Если продукт в корзине каким-то образом оказался NULL
-                throw new RuntimeException("Product missing in cart item ID: " + cartItem.getId());
-            }
-            if (cartItem.getQuantity() <= 0) {
-                continue; // Игнорируем или выбрасываем исключение
-            }
-
-            // Создаем OrderItem
+        for (CartItem cartItem : validItems) {
             OrderItem orderItem = new OrderItem();
-            orderItem.setProduct(product);
+            orderItem.setProduct(cartItem.getProduct());
             orderItem.setQuantity(cartItem.getQuantity());
-            orderItem.setOrder(order); // Связываем с новым заказом
-
+            orderItem.setOrder(order);
             orderItems.add(orderItem);
-
-            // ⚠️ ОЧЕНЬ ВАЖНЫЙ ШАГ: Удаляем позицию из корзины
-            cartItemRepo.delete(cartItem);
         }
 
-        // 6. Устанавливаем и сохраняем заказ
         order.setItems(orderItems);
         Order savedOrder = orderRepo.save(order);
 
-        // 7. Очистка/удаление самой корзины (если нужно)
-        cartRepo.delete(cart); // Если корзина удаляется после оформления заказа.
+        // 6. Полная очистка корзины после успешного заказа
+        cartItemRepo.deleteAll(allItems);
+        // cartRepo.delete(cart); // Обычно саму корзину (объект-контейнер) не удаляют, чтобы не плодить ID
 
         return savedOrder.getId();
+    }
+
+    // Вынес обновление профиля в отдельный метод для чистоты кода
+    private void updateUserProfile(User user, CreateOrder dto) {
+        if (dto.surName() != null) user.setSurName(dto.surName());
+        if (dto.lastName() != null) user.setLastName(dto.lastName());
+        if (dto.region() != null) user.setRegion(dto.region());
+        if (dto.cityOrDistrict() != null) user.setCityOrDistrict(dto.cityOrDistrict());
+        if (dto.street() != null) user.setStreet(dto.street());
+        if (dto.houseOrApartment() != null) user.setHouseOrApartment(dto.houseOrApartment());
+        if (dto.index() != null) user.setIndexPost(dto.index());
+        // userRepo.save(user); // Если нет @Transactional, нужно сохранить явно
     }
 
 
@@ -254,7 +259,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public CartDto getCart() {
         User user = getContextUser();
 
@@ -263,32 +268,35 @@ public class UserServiceImpl implements UserService {
             return new CartDto(null, List.of(), 0);
         }
 
-        // 🔴 Замена: Используем новый метод с JOIN FETCH
         List<CartItem> items = cartItemRepo.findByCartIdWithProducts(cart.getId());
 
+        // 1. Формируем список DTO, игнорируя удаленные товары
         List<CartItemDto> dtos = items.stream()
-                .map(i -> {
-                    // Дополнительная проверка на NULL, если вы не уверены в целостности данных
-                    if (i.getProduct() == null) {
-                        // Это не должно произойти после JOIN FETCH + NOT NULL/FK,
-                        // но это хорошая защита.
-                        System.err.println("WARNING: CartItem ID " + i.getId() + " has null Product.");
-                        return null; // Пропускаем элемент с ошибкой
-                    }
-                    return new CartItemDto(
-                            i.getId(),
-                            i.getProduct().getId(),
-                            i.getProduct().getName(),
-                            i.getQuantity(),
-                            i.getProduct().getPrice()
-                    );
-                })
-                .filter(java.util.Objects::nonNull) // Отфильтровываем NULL, если они возникли
+                .filter(item -> item.getProduct() != null) // Игнорируем товары со статусом is_active=false
+                .map(i -> new CartItemDto(
+                        i.getId(),
+                        i.getProduct().getId(),
+                        i.getProduct().getName(),
+                        i.getQuantity(),
+                        i.getProduct().getPrice()
+                ))
                 .toList();
 
+        // 2. Считаем общую сумму только для существующих товаров
         int total = items.stream()
+                .filter(item -> item.getProduct() != null)
                 .mapToInt(i -> i.getProduct().getPrice() * i.getQuantity())
                 .sum();
+
+        // 3. (Опционально, но полезно) Авто-очистка
+        // Если в корзине нашлись "удаленные" товары, их лучше удалить из БД,
+        // чтобы они не висели мертвым грузом.
+        List<CartItem> orphanItems = items.stream()
+                .filter(i -> i.getProduct() == null)
+                .toList();
+        if (!orphanItems.isEmpty()) {
+            cartItemRepo.deleteAll(orphanItems);
+        }
 
         return new CartDto(cart.getId(), dtos, total);
     }
@@ -338,10 +346,23 @@ public class UserServiceImpl implements UserService {
     }
 
     private OrderItemProductDTO toDtoItemProduct(Product product) {
-        // Если Product.catalog является объектом Catalog, нужно получить его ID
+        // 1. Проверяем, существует ли сам продукт
+        if (product == null) {
+            // Возвращаем пустой DTO или DTO с пометкой "Товар удален"
+            return new OrderItemProductDTO(
+                    0, // или null для ID
+                    "Товар более недоступен",
+                    0,
+                    Collections.emptyList(),
+                    false,
+                    "Каталог отсутствует"
+            );
+        }
+
+        // 2. Если продукт есть, проверяем каталог внутри него
         String catalogName = (product.getCatalog() != null)
                 ? product.getCatalog().getName()
-                : null;
+                : "Без каталога";
 
         return new OrderItemProductDTO(
                 product.getId(),

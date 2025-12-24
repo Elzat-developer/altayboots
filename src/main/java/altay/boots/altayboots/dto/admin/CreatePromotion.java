@@ -11,7 +11,7 @@ public record CreatePromotion(
         String description,
 
         @Schema(description = "Размер скидки", example = "20")
-        int percentageDiscounted,
+        Integer percentageDiscounted,
 
         @Schema(description = "Дата начала акции", example = "2025-01-01")
         String startDate,

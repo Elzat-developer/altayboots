@@ -6,7 +6,6 @@ import altay.boots.altayboots.query.PromotionFirstImageProjection;
 import altay.boots.altayboots.repository.*;
 import altay.boots.altayboots.service.AdminService;
 import altay.boots.altayboots.service.FileProcessingService;
-import altay.boots.altayboots.service.PhotosOwner;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -18,8 +17,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Consumer;
 
 @Service
 @Log4j2
@@ -32,71 +32,29 @@ public class AdminServiceImpl implements AdminService {
     private final OrderRepo orderRepo;
     private final FileProcessingService fileProcessingService;
     private final CartItemRepository cartItemRepository;
+    private final ProductPhotoRepo productPhotoRepo;
 
     // --- КОНСТАНТА ДЛЯ КОРНЕВОЙ ПАПКИ ЗАГРУЗКИ ---
     private static final String UPLOAD_ROOT_PATH = "C:/uploads";
 
     @Override
-    public void createProduct(CreateProduct createProduct, List<MultipartFile> photos) {
+    @Transactional
+    public void createProduct(CreateProduct createProduct, List<Integer> photoIds) {
         Catalog catalog = catalogRepo.findById(createProduct.catalog_id());
 
         if (catalog == null) {
-            // 🔥 Если каталог не найден, выбрасываем исключение
             throw new IllegalArgumentException("Каталог с ID " + createProduct.catalog_id() + " не найден. Продукт не может быть добавлен.");
         }
 
-        // --- ИНИЦИАЛИЗАЦИЯ ПРОДУКТА ---
         Product product = new Product();
-        if (createProduct.name() != null) {
-            product.setName(createProduct.name());
-        }
-        if (createProduct.description() != null) {
-            product.setDescription(createProduct.description());
-        }
-        if (createProduct.text() != null) {
-            product.setText(createProduct.text());
-        }
-        if (createProduct.price() != null) {
-            product.setPrice(createProduct.price());
-        }
-        if (createProduct.oldPrice() != null) {
-            product.setOldPrice(createProduct.oldPrice());
-        }
-        if (createProduct.sizes() != null) {
-            product.setSizes(createProduct.sizes());
-        }
+        updateProductFields(product, createProduct);
 
         product.setCatalog(catalog);
-        product.setActive(true);
-        // Первое сохранение для получения ID продукта,
+
         productRepo.save(product);
 
         // --- ЛОГИКА СОХРАНЕНИЯ ФОТОГРАФИЙ ---
-        final String subDirectory = "products";
-        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            throw new RuntimeException("Не удалось создать папку загрузки", e);
-        }
-
-        // 📷 СОХРАНЕНИЕ НЕСКОЛЬКИХ ФОТО
-        if (photos != null) {
-            for (MultipartFile file : photos) {
-                if (!file.isEmpty()) {
-                    // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
-                    String photoURL = fileProcessingService.processPhotoAndReturnURL(
-                            file, uploadDir, subDirectory);
-
-                    ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(photoURL);
-                    photo.setProduct(product);
-
-                    product.getPhotos().add(photo);
-                }
-            }
-        }
-        productRepo.save(product);
+        linkPhotos(photoIds, p -> p.setProduct(product));
     }
 
     @Override
@@ -150,55 +108,24 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void editProduct(int product_id, EditProduct editProduct, List<MultipartFile> photos) {
+    public void editProduct(int product_id, EditProduct editProduct, List<Integer> photoIds) {
         Product product = productRepo.findById(product_id);
         if (product == null) {
             throw new IllegalArgumentException("Продукт с ID " + product_id + " не найден.");
         }
 
         // 1. ОБНОВЛЕНИЕ ОСНОВНЫХ ПОЛЕЙ
-        if (editProduct.name() != null)
-            product.setName(editProduct.name());
-        if (editProduct.description() != null)
-            product.setDescription(editProduct.description());
-        if (editProduct.text() != null)
-            product.setText(editProduct.text());
-        if (editProduct.price() != null)
-            product.setPrice(editProduct.price());
-        if (editProduct.oldPrice() != null)
-            product.setOldPrice(editProduct.oldPrice());
-        if (editProduct.sizes() != null)
-            product.setSizes(editProduct.sizes());
-        // 2. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
-        final String subDirectory = "products";
-        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            throw new RuntimeException("Не удалось создать папку загрузки", e);
+        if (editProduct.name() != null) product.setName(editProduct.name());
+        if (editProduct.description() != null) product.setDescription(editProduct.description());
+        if (editProduct.text() != null) product.setText(editProduct.text());
+        if (editProduct.price() != null) product.setPrice(editProduct.price());
+        if (editProduct.oldPrice() != null) product.setOldPrice(editProduct.oldPrice());
+        if (editProduct.sizes() != null) product.setSizes(editProduct.sizes());
+        // Обновляем фото
+        if (photoIds != null) {
+            unlinkPhotos(productPhotoRepo.findAllByProduct(product), p -> p.setProduct(null));
+            linkPhotos(photoIds, p -> p.setProduct(product));
         }
-
-        // 3. ЗАГРУЗКА НОВЫХ ФОТО И СОЗДАНИЕ КАРТЫ ЗАМЕН
-        Map<String, ProductPhoto> newPhotosMap = new HashMap<>();
-
-        if (photos != null && !photos.isEmpty()) {
-            for (int i = 0; i < photos.size(); i++) {
-                MultipartFile file = photos.get(i);
-                if (!file.isEmpty()) {
-                    String photoURL = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
-
-                    ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(photoURL);
-                    photo.setProduct(product); // Установка обратной связи с Product
-
-                    String placeholder = "NEW_FILE_" + i;
-                    newPhotosMap.put(placeholder, photo);
-                }
-            }
-        }
-
-        // 4. ПРИМЕНЕНИЕ ЛОГИКИ ОБНОВЛЕНИЯ ФОТОГРАФИЙ (ПЕРЕИСПОЛЬЗОВАНИЕ)
-        updatePhotos(product, "Product", editProduct.finalPhotoOrder(), newPhotosMap);
 
         productRepo.save(product);
     }
@@ -276,7 +203,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void editCompany(CreateCompanyDescription companyDescription,MultipartFile photo) {
+    public void editCompany(CreateCompanyDescription companyDescription,Integer photoId) {
         Company company = companyRepo.findById(1);
         if (companyDescription.name() != null) {
             company.setName(companyDescription.name());
@@ -311,40 +238,27 @@ public class AdminServiceImpl implements AdminService {
         if (companyDescription.freeEnd() != null){
             company.setFreeEnd(companyDescription.freeEnd());
         }
-        final String subDirectory = "company";
-        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            log.error("❌ Не удалось создать папку загрузки: {}", e.getMessage(), e);
-            throw new RuntimeException("Не удалось создать папку загрузки", e);
-        }
 
-        // 📷 Фото
-        if (photo != null && !photo.isEmpty()) {
-            // --- КРИТИЧЕСКИЙ ШАГ: УДАЛЕНИЕ СТАРОГО ФАЙЛА
-            String oldPhotoUrl = company.getPhotoURL();
-            if (oldPhotoUrl != null) {
-                fileProcessingService.deleteFileFromDisk(oldPhotoUrl);
-            }
-
-            String photoURL = fileProcessingService.processPhotoAndReturnURL(photo, uploadDir, subDirectory);
-            company.setPhotoURL(photoURL);
-            log.info("✅ Фото успешно сохранено: {}", photoURL);
+        // Обновляем фото через ID
+        if (photoId != null) {
+            ProductPhoto photo = productPhotoRepo.findById(photoId)
+                    .orElseThrow(() -> new EntityNotFoundException("Photo ID not found"));
+            company.setPhotoURL(photo.getPhotoURL());
         }
 
         companyRepo.save(company);
     }
 
     @Override
-    public void createPromotion(CreatePromotion createPromotion, List<MultipartFile> photos) {
-
+    @Transactional
+    public void createPromotion(CreatePromotion createPromotion, List<Integer> photoIds) {
         Promotion promotion = new Promotion();
 
-        promotion.setName(createPromotion.name());
-        promotion.setDescription(createPromotion.description());
-
-        promotion.setPercentageDiscounted(createPromotion.percentageDiscounted());
+        if (createPromotion.name() != null) promotion.setName(createPromotion.name());
+        if (createPromotion.description() != null) promotion.setDescription(createPromotion.description());
+        if (createPromotion.percentageDiscounted() != null) promotion.setPercentageDiscounted(createPromotion.percentageDiscounted());
+        if (createPromotion.startDate() != null) promotion.setStartDate(createPromotion.startDate());
+        if (createPromotion.endDate() != null) promotion.setEndDate(createPromotion.endDate());
 
         // Инициализация привязок к сущностям как null (т.к. привязка будет позже)
         promotion.setCatalog(null);
@@ -353,41 +267,13 @@ public class AdminServiceImpl implements AdminService {
         // Если акция по умолчанию не глобальная, установите false
          promotion.setGlobal(false);
 
-        promotion.setStartDate(createPromotion.startDate());
-        promotion.setEndDate(createPromotion.endDate());
+
 
         // Сохранение акции для получения ID, необходимого для привязки фото
         promotionRepo.save(promotion);
 
-        // --- 3. ПОДГОТОВКА ПАПКИ И СОХРАНЕНИЕ ФОТОГРАФИЙ ---
-        final String subDirectory = "promotions";
-        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            throw new RuntimeException("Не удалось создать папку загрузки", e);
-        }
-
-        if (photos != null && !photos.isEmpty()) {
-            for (MultipartFile file : photos) {
-                if (!file.isEmpty()) {
-                    // 🔥 ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЛУЧЕНИЯ URL
-                    String photoURL = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
-
-                    ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(photoURL);
-
-                    // ⚠️ КОРРЕКТНАЯ ПРИВЯЗКА: Привязываем фото к самой АКЦИИ
-                    // (Предполагается, что у ProductPhoto есть поле setPromotion(Promotion))
-                    photo.setPromotion(promotion);
-
-                    promotion.getPhotos().add(photo);
-                }
-            }
-        }
-
-        // 4. ПОВТОРНОЕ СОХРАНЕНИЕ (для сохранения привязанных фотографий)
-        promotionRepo.save(promotion);
+        // Привязываем фото
+        linkPhotos(photoIds, p -> p.setPromotion(promotion));
     }
 
     @Override
@@ -406,39 +292,12 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void editPromotion(int promotionId, EditPromotion editPromotion, List<MultipartFile> photos) {
+    public void editPromotion(int promotionId, EditPromotion editPromotion, List<Integer> photoIds) {
         Promotion promotion = promotionRepo.findById(promotionId);
-        if (promotion == null) {
-            throw new IllegalArgumentException("Promotion с ID " + promotionId + " не найден.");
-        }
+        if (promotion == null) {throw new IllegalArgumentException("Promotion с ID " + promotionId + " не найден.");}
         // --- 2. ОБНОВЛЕНИЕ ОСНОВНЫХ ПОЛЕЙ И ПРИВЯЗОК ---
-
-        // 2.1. ОБНОВЛЕНИЕ ПРИВЯЗКИ К КАТАЛОГУ (CatalogId)
-        if (editPromotion.catalogId() != null) {
-            if (editPromotion.catalogId() <= 0) {
-                promotion.setCatalog(null); // Сброс привязки
-            } else {
-                Catalog catalog = catalogRepo.findById(editPromotion.catalogId())
-                        .orElseThrow(() -> new IllegalArgumentException("Каталог с ID " + editPromotion.catalogId() + " не найден."));
-                promotion.setCatalog(catalog);
-            }
-        }
-
-        // 2.2. ОБНОВЛЕНИЕ ПРИВЯЗКИ К ПРОДУКТУ (ProductId)
-        if (editPromotion.productId() != null) {
-            if (editPromotion.productId() <= 0) {
-                promotion.setProduct(null); // Сброс привязки
-            } else {
-                Product product = productRepo.findById(editPromotion.productId())
-                        .orElseThrow(() -> new IllegalArgumentException("Продукт с ID " + editPromotion.productId() + " не найден."));
-                promotion.setProduct(product);
-            }
-        }
-
-        // 2.3. ОБНОВЛЕНИЕ ПРОСТЫХ ПОЛЕЙ
         if (editPromotion.name() != null) promotion.setName(editPromotion.name());
         if (editPromotion.description() != null) promotion.setDescription(editPromotion.description());
-
         if (editPromotion.percentageDiscounted() != null) {
             int discount = editPromotion.percentageDiscounted();
             if (discount < 1 || discount > 100) {
@@ -446,118 +305,60 @@ public class AdminServiceImpl implements AdminService {
             }
             promotion.setPercentageDiscounted(discount);
         }
-
         if (editPromotion.global() != null) promotion.setGlobal(editPromotion.global());
+        if (editPromotion.startDate() != null) promotion.setStartDate(editPromotion.startDate());
+        if (editPromotion.endDate() != null) promotion.setEndDate(editPromotion.endDate());
+        // Обновление связей с Catalog/Product
+        updatePromotionLinks(promotion, editPromotion.catalogId(), editPromotion.productId());
 
-        if (editPromotion.startDate() != null) {
-            promotion.setStartDate(editPromotion.startDate());
-        }
-        if (editPromotion.endDate() != null) {
-            promotion.setEndDate(editPromotion.endDate());
-        }
-
-        // 1. ПОДГОТОВКА ПАПКИ ЗАГРУЗКИ
-        final String subDirectory = "promotions";
-        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
-        try {
-            Files.createDirectories(uploadDir);
-        } catch (IOException e) {
-            throw new RuntimeException("Не удалось создать папку загрузки", e);
-        }
-
-        // 2. ЗАГРУЗКА НОВЫХ ФОТО И СОЗДАНИЕ КАРТЫ ЗАМЕН
-        Map<String, ProductPhoto> newPhotosMap = new HashMap<>();
-
-        if (photos != null && !photos.isEmpty()) {
-            for (int i = 0; i < photos.size(); i++) {
-                MultipartFile file = photos.get(i);
-                if (!file.isEmpty()) {
-                    // Используем ваш сервис для загрузки и получения URL
-                    String photoURL = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
-
-                    ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(photoURL);
-                    photo.setPromotion(promotion);
-
-                    String placeholder = "NEW_FILE_" + i;
-                    newPhotosMap.put(placeholder, photo);
-                }
-            }
-        }
-
-        // 3. ПРИМЕНЕНИЕ ЛОГИКИ ОБНОВЛЕНИЯ ФОТОГРАФИЙ (ПЕРЕИСПОЛЬЗОВАНИЕ)
-        updatePhotos(promotion, "Promotion", editPromotion.finalPhotoOrder(), newPhotosMap);
-
-        // Проверяем, что акция ПРИВЯЗАНА ХОТЯ БЫ К ОДНОМУ объекту после всех изменений.
-        boolean isBoundToCatalog = promotion.getCatalog() != null;
-        boolean isBoundToProduct = promotion.getProduct() != null;
-        boolean isGlobal = promotion.isGlobal();
-
-        if (!isBoundToCatalog && !isBoundToProduct && !isGlobal) {
-            // Отменяем сохранение и сообщаем пользователю, что акция не имеет применения
-            throw new IllegalArgumentException("Акция должна быть привязана хотя бы к одному объекту: Каталогу, Продукту или должна быть помечена как Глобальная.");
+        // Обновление фотографий
+        if (photoIds != null) {
+            unlinkPhotos(productPhotoRepo.findAllByPromotion(promotion), p -> p.setPromotion(null));
+            linkPhotos(photoIds, p -> p.setPromotion(promotion));
         }
 
         promotionRepo.save(promotion);
     }
-
-    // ------------------- PRIVATE МЕТОД ОБРАБОТКИ ПОРЯДКА ФОТО --------------------
-    private void updatePhotos(PhotosOwner ownerEntity, String entityType,
-                              List<String> finalPhotoOrder, Map<String, ProductPhoto> newPhotosMap) {
-
-        // 1. Создаем Map из существующих фото (те, что уже в БД)
-        Map<Integer, ProductPhoto> existingPhotosMap = ownerEntity.getPhotos().stream()
-                // Используем .filter(p -> p.getId() > 0) для примитивного int ID
-                .filter(p -> p.getId() > 0)
-                .collect(Collectors.toMap(ProductPhoto::getId, p -> p, (p1, p2) -> p1));
-
-        List<ProductPhoto> photosToKeep = new ArrayList<>();
-
-        // 2. Проходим по желаемому порядку (finalPhotoOrder) и строим финальный список.
-        if (finalPhotoOrder != null) {
-            for (String item : finalPhotoOrder) { // 🔥 Итерация по String, как определено в сигнатуре
-
-                if (item.startsWith("NEW_FILE_")) {
-                    // Это новая заглушка
-                    ProductPhoto newPhoto = newPhotosMap.get(item);
-                    if (newPhoto != null) {
-                        photosToKeep.add(newPhoto);
-                    }
-                } else {
-                    // 🔥 Это ID существующего фото (в виде строки)
-                    try {
-                        Integer photoId = Integer.parseInt(item);
-                        ProductPhoto existingPhoto = existingPhotosMap.get(photoId);
-
-                        if (existingPhoto != null) {
-                            photosToKeep.add(existingPhoto);
-                            // Удаляем из Map, чтобы оставшиеся элементы были помечены как сироты
-                            existingPhotosMap.remove(photoId);
-                        }
-                    } catch (NumberFormatException e) {
-                        // Игнорируем или логируем некорректный ID в списке
-                        log.warn("Некорректный ID фото в finalPhotoOrder: {}", item);
-                    }
-                }
-            }
+    private void updateProductFields(Product product, CreateProduct dto) {
+        if (dto.name() != null) product.setName(dto.name());
+        if (dto.description() != null) product.setDescription(dto.description());
+        if (dto.text() != null) product.setText(dto.text());
+        if (dto.price() != null) product.setPrice(dto.price());
+        if (dto.oldPrice() != null) product.setOldPrice(dto.oldPrice());
+        if (dto.sizes() != null) product.setSizes(dto.sizes());
+        product.setActive(true);
+    }
+    private void updatePromotionLinks(Promotion promotion, Integer catalogId, Integer productId) {
+        if (catalogId != null) {
+            if (catalogId <= 0) promotion.setCatalog(null);
+            else promotion.setCatalog(catalogRepo.findById(catalogId).orElse(null));
         }
-
-        // 3. УДАЛЕНИЕ ФАЙЛОВ С ДИСКА (Используем ваш метод deleteFileFromDisk, который вы указали)
-        for (ProductPhoto photoToRemove : existingPhotosMap.values()) {
-            try {
-                fileProcessingService.deleteFileFromDisk(photoToRemove.getPhotoURL());
-            } catch (Exception e) {
-                log.warn("Не удалось удалить файл с диска для сущности {} ID {}: {}",
-                        entityType, ownerEntity.getId(), photoToRemove.getPhotoURL(), e);
-            }
+        if (productId != null) {
+            if (productId <= 0) promotion.setProduct(null);
+            else promotion.setProduct(productRepo.findById(productId).orElse(null));
         }
+    }
+    /**
+     * Универсальный метод для привязки фото к любой сущности.
+     * @param photoIds список ID фотографий
+     * @param binder функция, определяющая, какое поле сетить (p -> p.setProduct(product))
+     */
+    private void linkPhotos(List<Integer> photoIds, Consumer<ProductPhoto> binder) {
+        if (photoIds != null && !photoIds.isEmpty()) {
+            List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
+            photos.forEach(binder);
+            productPhotoRepo.saveAll(photos);
+        }
+    }
 
-        // 4. Удаляем "сироты" из СУЩЕСТВУЮЩЕЙ коллекции (JpaSystemException fix)
-        ownerEntity.getPhotos().removeAll(existingPhotosMap.values());
-
-        // 5. Очищаем и заменяем СОДЕРЖИМОЕ, чтобы установить финальный порядок.
-        ownerEntity.getPhotos().clear();
-        ownerEntity.getPhotos().addAll(photosToKeep);
+    /**
+     * Очистка старых связей перед обновлением
+     */
+    private void unlinkPhotos(List<ProductPhoto> currentPhotos, Consumer<ProductPhoto> unbinder) {
+        if (currentPhotos != null) {
+            currentPhotos.forEach(unbinder);
+            productPhotoRepo.saveAll(currentPhotos);
+        }
     }
 
     @Override
@@ -656,41 +457,55 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public GetProductPhotos getProductsPhotos(Integer productId) {
-        Product product = productRepo.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product с ID " + productId + " не найден."));
+    public void createPhotos(List<MultipartFile> photos) {
+        final String subDirectory = "all_media";
+        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
+        try { Files.createDirectories(uploadDir); } catch (IOException e) { throw new RuntimeException(e); }
 
-        List<GetPhotoDto> photoDtoList = product.getPhotos()
-                .stream()
-                .map(productPhoto -> new GetPhotoDto(
-                        productPhoto.getId(),
-                        productPhoto.getPhotoURL()
-                ))
-                .toList();
-
-        return new GetProductPhotos(
-                product.getId(),
-                photoDtoList
-        );
+        if (photos != null) {
+            for (MultipartFile file : photos) {
+                if (!file.isEmpty()) {
+                    String url = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
+                    ProductPhoto photo = new ProductPhoto();
+                    photo.setPhotoURL(url);
+                    productPhotoRepo.save(photo);
+                }
+            }
+        }
     }
 
     @Override
-    public GetProductPhotos getPromotionsPhotos(Integer promotionId) {
-        Promotion promotion = promotionRepo.findById(promotionId)
-                .orElseThrow(() -> new IllegalArgumentException("Promotion с ID " + promotionId + " не найден."));
-
-        List<GetPhotoDto> photoDtoList = promotion.getPhotos()
-                .stream()
-                .map(productPhoto -> new GetPhotoDto(
-                        productPhoto.getId(),
-                        productPhoto.getPhotoURL()
-                ))
+    public List<GetPhotoDto> getAllPhotos() {
+        return productPhotoRepo.findAll().stream()
+                .map(p -> new GetPhotoDto(p.getId(), p.getPhotoURL()))
                 .toList();
+    }
 
-        return new GetProductPhotos(
-                promotion.getId(),
-                photoDtoList
-        );
+    @Override
+    @Transactional
+    public void editPhoto(Integer photoId, MultipartFile file) {
+        ProductPhoto photo = productPhotoRepo.findById(photoId)
+                .orElseThrow(() -> new EntityNotFoundException("Photo not found"));
+
+        // Удаляем старый файл
+        fileProcessingService.deleteFileFromDisk(photo.getPhotoURL());
+
+        // Загружаем новый
+        final String subDirectory = "all_media";
+        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
+        String newUrl = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
+
+        photo.setPhotoURL(newUrl);
+        productPhotoRepo.save(photo);
+    }
+
+    @Override
+    @Transactional
+    public void deletePhoto(Integer photoId) {
+        ProductPhoto photo = productPhotoRepo.findById(photoId)
+                .orElseThrow(() -> new EntityNotFoundException("Photo not found"));
+        fileProcessingService.deleteFileFromDisk(photo.getPhotoURL());
+        productPhotoRepo.delete(photo);
     }
 
     private GetAdminOrderSimple toDtoOrders(Order order) {
