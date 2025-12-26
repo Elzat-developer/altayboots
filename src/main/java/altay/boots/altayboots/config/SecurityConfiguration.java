@@ -44,7 +44,7 @@ public class SecurityConfiguration {
                                 "/swagger-ui.html/**",
                                 "/v3/api-docs/**",
                                 "/api/v1/trial/**",
-                                "/uploads/**"
+                                "/home/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyAuthority(Authorities.ADMIN.name())
                         .requestMatchers("/api/v1/user/**").hasAnyAuthority(Authorities.USER.name())
