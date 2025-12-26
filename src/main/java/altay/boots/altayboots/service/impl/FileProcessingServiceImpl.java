@@ -59,9 +59,9 @@ public class FileProcessingServiceImpl implements FileProcessingService {
         Path filePath = uploadDir.resolve(fileName);
         try {
             compressAndSaveImage(photo, filePath);
-            return filePath.toAbsolutePath().toString();
+            //return filePath.toAbsolutePath().toString();
             // 🔥 ВОЗВРАЩАЕМ URL-ПУТЬ, КОТОРЫЙ БУДЕТ ИСПОЛЬЗОВАТЬ ФРОНТЕНД
-           // return "/uploads/" + subDirectory + "/" + fileName;
+            return "/uploads/" + subDirectory + "/" + fileName;
         } catch (IOException e) {
             log.error("Ошибка при обработке фото '{}': {}", photo.getOriginalFilename(), e.getMessage(), e);
             throw new RuntimeException("Ошибка при обработке фото", e);
