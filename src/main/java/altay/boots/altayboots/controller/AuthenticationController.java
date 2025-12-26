@@ -132,4 +132,9 @@ public class AuthenticationController {
     public ResponseEntity<List<GetPromotionFirstImage>> getPromotionFirstImage(){
         return ResponseEntity.ok(adminService.getPromotionFirstImage());
     }
+    @Operation(summary = "Получить все загруженные фотографии")
+    @GetMapping("/photos")
+    public ResponseEntity<List<GetPhotoDto>> getAllPhotos() {
+        return ResponseEntity.ok(adminService.getAllPhotos());
+    }
 }

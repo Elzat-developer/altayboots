@@ -36,11 +36,6 @@ public class AdminPanelController {
     ) {
         return ResponseEntity.ok(adminService.getOrder(order_id));
     }
-    @Operation(summary = "Получить все загруженные фотографии")
-    @GetMapping("/photos")
-    public ResponseEntity<List<GetPhotoDto>> getAllPhotos() {
-        return ResponseEntity.ok(adminService.getAllPhotos());
-    }
 
     // --------------------- CREATE ------------------------
 
