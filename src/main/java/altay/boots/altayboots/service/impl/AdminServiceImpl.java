@@ -125,31 +125,37 @@ public class AdminServiceImpl implements AdminService {
         if (editProduct.price() != null) product.setPrice(editProduct.price());
         if (editProduct.oldPrice() != null) product.setOldPrice(editProduct.oldPrice());
         if (editProduct.sizes() != null) product.setSizes(editProduct.sizes());
-        // Обновляем фото
+        // 2. ОБНОВЛЕНИЕ ФОТО С СОХРАНЕНИЕМ ПОРЯДКА
         if (photoIds != null) {
-            unlinkProductPhotos(photoIds, product);
-            savePhotosProduct(photoIds, product);
+            updateProductPhotos(product, photoIds);
         }
 
         productRepo.save(product);
     }
 
-    private void unlinkProductPhotos(List<Integer> photoIds, Product product) {
-        if (photoIds != null) {
-            // Очищаем старые связи
-            List<ProductPhoto> currentPhotos = productPhotoRepo.findAllByProduct(product);
-            for (ProductPhoto p : currentPhotos) {
-                p.setProduct(null); // Убираем ссылку на продукт
-            }
-            productPhotoRepo.saveAll(currentPhotos);
-
-            // ОЧЕНЬ ВАЖНО: Очищаем список внутри самого продукта
-            if (product.getPhotos() != null) {
-                product.getPhotos().clear();
-            } else {
-                product.setPhotos(new ArrayList<>());
-            }
+    private void updateProductPhotos(Product product, List<Integer> photoIds) {
+        // ШАГ 1: Полностью отвязываем старые фото (чтобы индексы в БД обнулились)
+        List<ProductPhoto> currentPhotos = productPhotoRepo.findAllByProduct(product);
+        for (ProductPhoto p : currentPhotos) {
+            p.setProduct(null);
         }
+        productPhotoRepo.saveAll(currentPhotos);
+
+        // ШАГ 2: Очищаем список внутри Java-объекта
+        if (product.getPhotos() == null) {
+            product.setPhotos(new ArrayList<>());
+        } else {
+            product.getPhotos().clear();
+        }
+
+        // ШАГ 3: Привязываем новые фото строго по списку photoIds
+        for (Integer photoId : photoIds) {
+            productPhotoRepo.findById(photoId).ifPresent(photo -> {
+                photo.setProduct(product); // Устанавливаем связь
+                product.getPhotos().add(photo); // Добавляем в список (Hibernate сам проставит индекс в @OrderColumn)
+            });
+        }
+        // Сохранять photoRepo.saveAll(photos) не обязательно, так как стоит CascadeType.ALL
     }
 
     private void savePhotosProduct(List<Integer> photoIds, Product product) {
