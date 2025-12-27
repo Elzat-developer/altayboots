@@ -59,16 +59,7 @@ public class AdminServiceImpl implements AdminService {
         productRepo.save(product);
 
         // --- ЛОГИКА СОХРАНЕНИЯ ФОТОГРАФИЙ ---
-        if (photoIds != null && !photoIds.isEmpty()) {
-            List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
-
-            for (ProductPhoto photo : photos) {
-                photo.setProduct(product); // Устанавливаем владельца (сторона Photo)
-                product.getPhotos().add(photo); // Добавляем в коллекцию (сторона Product)
-            }
-
-            productPhotoRepo.saveAll(photos);
-        }
+        savePhotosProduct(photoIds, product);
     }
 
     @Override
@@ -138,10 +129,23 @@ public class AdminServiceImpl implements AdminService {
         // Обновляем фото
         if (photoIds != null) {
             unlinkPhotos(productPhotoRepo.findAllByProduct(product), p -> p.setProduct(null));
-            linkPhotos(photoIds, p -> p.setProduct(product));
+            savePhotosProduct(photoIds, product);
         }
 
         productRepo.save(product);
+    }
+
+    private void savePhotosProduct(List<Integer> photoIds, Product product) {
+        if (photoIds != null && !photoIds.isEmpty()) {
+            List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
+
+            for (ProductPhoto photo : photos) {
+                photo.setProduct(product); // Устанавливаем владельца (сторона Photo)
+                product.getPhotos().add(photo); // Добавляем в коллекцию (сторона Product)
+            }
+
+            productPhotoRepo.saveAll(photos);
+        }
     }
 
     @Override
@@ -287,7 +291,20 @@ public class AdminServiceImpl implements AdminService {
         promotionRepo.save(promotion);
 
         // Привязываем фото
-        linkPhotos(photoIds, p -> p.setPromotion(promotion));
+        savePhotosPromotion(photoIds, promotion);
+    }
+
+    private void savePhotosPromotion(List<Integer> photoIds, Promotion promotion) {
+        if (photoIds != null && !photoIds.isEmpty()) {
+            List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
+
+            for (ProductPhoto photo : photos) {
+                photo.setPromotion(promotion); // Устанавливаем владельца (сторона Photo)
+                promotion.getPhotos().add(photo); // Добавляем в коллекцию (сторона Product)
+            }
+
+            productPhotoRepo.saveAll(photos);
+        }
     }
 
     @Override
@@ -326,10 +343,7 @@ public class AdminServiceImpl implements AdminService {
         updatePromotionLinks(promotion, editPromotion.catalogId(), editPromotion.productId());
 
         // Обновление фотографий
-        if (photoIds != null) {
-            unlinkPhotos(productPhotoRepo.findAllByPromotion(promotion), p -> p.setPromotion(null));
-            linkPhotos(photoIds, p -> p.setPromotion(promotion));
-        }
+        savePhotosPromotion(photoIds, promotion);
 
         promotionRepo.save(promotion);
     }
@@ -352,19 +366,6 @@ public class AdminServiceImpl implements AdminService {
             else promotion.setProduct(productRepo.findById(productId).orElse(null));
         }
     }
-    /**
-     * Универсальный метод для привязки фото к любой сущности.
-     * @param photoIds список ID фотографий
-     * @param binder функция, определяющая, какое поле сетить (p -> p.setProduct(product))
-     */
-    private void linkPhotos(List<Integer> photoIds, Consumer<ProductPhoto> binder) {
-        if (photoIds != null && !photoIds.isEmpty()) {
-            List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
-            photos.forEach(binder);
-            productPhotoRepo.saveAll(photos);
-        }
-    }
-
     /**
      * Очистка старых связей перед обновлением
      */
