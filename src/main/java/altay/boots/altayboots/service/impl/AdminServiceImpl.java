@@ -20,7 +20,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
 
 @Service
 @Log4j2
@@ -128,11 +127,29 @@ public class AdminServiceImpl implements AdminService {
         if (editProduct.sizes() != null) product.setSizes(editProduct.sizes());
         // Обновляем фото
         if (photoIds != null) {
-            unlinkPhotos(productPhotoRepo.findAllByProduct(product), p -> p.setProduct(null));
+            unlinkProductPhotos(photoIds, product);
             savePhotosProduct(photoIds, product);
         }
 
         productRepo.save(product);
+    }
+
+    private void unlinkProductPhotos(List<Integer> photoIds, Product product) {
+        if (photoIds != null) {
+            // Очищаем старые связи
+            List<ProductPhoto> currentPhotos = productPhotoRepo.findAllByProduct(product);
+            for (ProductPhoto p : currentPhotos) {
+                p.setProduct(null); // Убираем ссылку на продукт
+            }
+            productPhotoRepo.saveAll(currentPhotos);
+
+            // ОЧЕНЬ ВАЖНО: Очищаем список внутри самого продукта
+            if (product.getPhotos() != null) {
+                product.getPhotos().clear();
+            } else {
+                product.setPhotos(new ArrayList<>());
+            }
+        }
     }
 
     private void savePhotosProduct(List<Integer> photoIds, Product product) {
@@ -366,16 +383,6 @@ public class AdminServiceImpl implements AdminService {
             else promotion.setProduct(productRepo.findById(productId).orElse(null));
         }
     }
-    /**
-     * Очистка старых связей перед обновлением
-     */
-    private void unlinkPhotos(List<ProductPhoto> currentPhotos, Consumer<ProductPhoto> unbinder) {
-        if (currentPhotos != null) {
-            currentPhotos.forEach(unbinder);
-            productPhotoRepo.saveAll(currentPhotos);
-        }
-    }
-
     @Override
     public void deletePromotion(Integer promotionId) {
         promotionRepo.deleteById(promotionId);
