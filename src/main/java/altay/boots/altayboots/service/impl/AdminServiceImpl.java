@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -48,13 +49,26 @@ public class AdminServiceImpl implements AdminService {
 
         Product product = new Product();
         updateProductFields(product, createProduct);
-
         product.setCatalog(catalog);
+
+        // Инициализируем пустой список в продукте, если он еще не инициализирован
+        if (product.getPhotos() == null) {
+            product.setPhotos(new ArrayList<>());
+        }
 
         productRepo.save(product);
 
         // --- ЛОГИКА СОХРАНЕНИЯ ФОТОГРАФИЙ ---
-        linkPhotos(photoIds, p -> p.setProduct(product));
+        if (photoIds != null && !photoIds.isEmpty()) {
+            List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
+
+            for (ProductPhoto photo : photos) {
+                photo.setProduct(product); // Устанавливаем владельца (сторона Photo)
+                product.getPhotos().add(photo); // Добавляем в коллекцию (сторона Product)
+            }
+
+            productPhotoRepo.saveAll(photos);
+        }
     }
 
     @Override
