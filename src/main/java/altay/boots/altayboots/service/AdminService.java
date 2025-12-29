@@ -6,7 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface AdminService {
-    void createProduct(CreateProduct createProduct, List<Integer> photoIds);
+    void createProduct(CreateProduct createProduct);
     List<GetProduct> getProducts();
     GetProduct getProduct(int productId);
     void editProduct(int productId, EditProduct editProduct, List<Integer> photoIds);

@@ -41,11 +41,8 @@ public class AdminPanelController {
 
     @Operation(summary = "Создать продукта")
     @PostMapping("/create-product")
-    public ResponseEntity<String> createProduct(
-            @RequestBody CreateProduct createProduct,
-            @RequestParam(required = false) List<Integer> photoIds
-    ) {
-        adminService.createProduct(createProduct, photoIds);
+    public ResponseEntity<String> createProduct(@RequestBody CreateProduct createProduct) {
+        adminService.createProduct(createProduct);
         return new ResponseEntity<>("Product successfully created!", HttpStatus.CREATED);
     }
 

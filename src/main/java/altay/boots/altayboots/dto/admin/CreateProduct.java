@@ -2,6 +2,7 @@ package altay.boots.altayboots.dto.admin;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.util.List;
 import java.util.Set;
 
 @Schema(description = "Данные для создания продукта")
@@ -22,7 +23,8 @@ public record CreateProduct(
         Integer oldPrice,
         @Schema(description = "Размеры", example = "[\"38\", \"39\", \"40\"]...")
         Set<String> sizes,
-
+        @Schema(description = "Список ID фотографий", example = "[12, 13, 15]")
+        List<Integer> photoIds,
         @Schema(description = "ID каталога", example = "1")
         int catalog_id
 ) {}

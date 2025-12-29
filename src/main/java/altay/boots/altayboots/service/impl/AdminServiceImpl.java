@@ -39,7 +39,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void createProduct(CreateProduct createProduct, List<Integer> photoIds) {
+    public void createProduct(CreateProduct createProduct) {
         Catalog catalog = catalogRepo.findById(createProduct.catalog_id());
 
         if (catalog == null) {
@@ -58,7 +58,7 @@ public class AdminServiceImpl implements AdminService {
         productRepo.save(product);
 
         // --- ЛОГИКА СОХРАНЕНИЯ ФОТОГРАФИЙ ---
-        savePhotosProduct(photoIds, product);
+        savePhotosProduct(createProduct.photoIds(), product);
     }
 
     @Override
@@ -157,7 +157,6 @@ public class AdminServiceImpl implements AdminService {
         }
         // Сохранять photoRepo.saveAll(photos) не обязательно, так как стоит CascadeType.ALL
     }
-
     private void savePhotosProduct(List<Integer> photoIds, Product product) {
         if (photoIds != null && !photoIds.isEmpty()) {
             List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
