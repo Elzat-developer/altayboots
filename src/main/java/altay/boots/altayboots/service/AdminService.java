@@ -9,7 +9,7 @@ public interface AdminService {
     void createProduct(CreateProduct createProduct);
     List<GetProduct> getProducts();
     GetProduct getProduct(int productId);
-    void editProduct(int productId, EditProduct editProduct, List<Integer> photoIds);
+    void editProduct(int productId, EditProduct editProduct);
     void deleteProduct(Integer productId);
 
     void createCatalog(CreateCatalog createCatalog);
@@ -19,12 +19,12 @@ public interface AdminService {
     void deleteCatalog(Integer catalogId);
 
     CompanyDescription getCompany();
-    void editCompany(CreateCompanyDescription companyDescription, Integer photoId);
+    void editCompany(CreateCompanyDescription companyDescription);
 
-    void createPromotion(CreatePromotion createPromotion, List<Integer> photoIds);
+    void createPromotion(CreatePromotion createPromotion);
     List<GetPromotion> getPromotions();
     GetPromotion getPromotion(int promotionId);
-    void editPromotion(int promotionId, EditPromotion editPromotion, List<Integer> photoIds);
+    void editPromotion(int promotionId, EditPromotion editPromotion);
     void deletePromotion(Integer promotionId);
 
     List<GetAdminOrderSimple> getOrders();

@@ -112,7 +112,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void editProduct(int product_id, EditProduct editProduct, List<Integer> photoIds) {
+    public void editProduct(int product_id, EditProduct editProduct) {
         Product product = productRepo.findById(product_id);
         if (product == null) {
             throw new IllegalArgumentException("Продукт с ID " + product_id + " не найден.");
@@ -126,8 +126,8 @@ public class AdminServiceImpl implements AdminService {
         if (editProduct.oldPrice() != null) product.setOldPrice(editProduct.oldPrice());
         if (editProduct.sizes() != null) product.setSizes(editProduct.sizes());
         // 2. ОБНОВЛЕНИЕ ФОТО С СОХРАНЕНИЕМ ПОРЯДКА
-        if (photoIds != null) {
-            updateProductPhotos(product, photoIds);
+        if (editProduct.photoIds() != null) {
+            updateProductPhotos(product, editProduct.photoIds());
         }
 
         productRepo.save(product);
@@ -243,7 +243,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void editCompany(CreateCompanyDescription companyDescription,Integer photoId) {
+    public void editCompany(CreateCompanyDescription companyDescription) {
         Company company = companyRepo.findById(1);
         if (companyDescription.name() != null) {
             company.setName(companyDescription.name());
@@ -280,8 +280,8 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // Обновляем фото через ID
-        if (photoId != null) {
-            ProductPhoto photo = productPhotoRepo.findById(photoId)
+        if (companyDescription.photoId() != null) {
+            ProductPhoto photo = productPhotoRepo.findById(companyDescription.photoId())
                     .orElseThrow(() -> new EntityNotFoundException("Photo ID not found"));
             company.setPhotoURL(photo.getPhotoURL());
         }
@@ -291,7 +291,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void createPromotion(CreatePromotion createPromotion, List<Integer> photoIds) {
+    public void createPromotion(CreatePromotion createPromotion) {
         Promotion promotion = new Promotion();
 
         if (createPromotion.name() != null) promotion.setName(createPromotion.name());
@@ -313,7 +313,7 @@ public class AdminServiceImpl implements AdminService {
         promotionRepo.save(promotion);
 
         // Привязываем фото
-        savePhotosPromotion(photoIds, promotion);
+        savePhotosPromotion(createPromotion.photoIds(), promotion);
     }
 
     private void savePhotosPromotion(List<Integer> photoIds, Promotion promotion) {
@@ -345,7 +345,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void editPromotion(int promotionId, EditPromotion editPromotion, List<Integer> photoIds) {
+    public void editPromotion(int promotionId, EditPromotion editPromotion) {
         Promotion promotion = promotionRepo.findById(promotionId);
         if (promotion == null) {throw new IllegalArgumentException("Promotion с ID " + promotionId + " не найден.");}
         // --- 2. ОБНОВЛЕНИЕ ОСНОВНЫХ ПОЛЕЙ И ПРИВЯЗОК ---
@@ -365,7 +365,7 @@ public class AdminServiceImpl implements AdminService {
         updatePromotionLinks(promotion, editPromotion.catalogId(), editPromotion.productId());
 
         // Обновление фотографий
-        savePhotosPromotion(photoIds, promotion);
+        savePhotosPromotion(editPromotion.photoIds(), promotion);
 
         promotionRepo.save(promotion);
     }

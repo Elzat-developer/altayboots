@@ -58,10 +58,9 @@ public class AdminPanelController {
     @Operation(summary = "Создать акцию")
     @PostMapping("/create-promotion")
     public ResponseEntity<String> createPromotion(
-            @RequestBody CreatePromotion createPromotion,
-            @RequestParam(required = false) List<Integer> photoIds
+            @RequestBody CreatePromotion createPromotion
     ) {
-        adminService.createPromotion(createPromotion, photoIds);
+        adminService.createPromotion(createPromotion);
         return new ResponseEntity<>("Promotion created!", HttpStatus.CREATED);
     }
     @Operation(summary = "Загрузить фотографии (без привязки)")
@@ -77,10 +76,9 @@ public class AdminPanelController {
     @PutMapping("/edit-product/{product_id}")
     public ResponseEntity<String> editProduct(
             @PathVariable Integer product_id,
-            @RequestBody EditProduct editProduct,
-            @RequestParam(required = false) List<Integer> photoIds
+            @RequestBody EditProduct editProduct
     ) {
-        adminService.editProduct(product_id, editProduct, photoIds);
+        adminService.editProduct(product_id, editProduct);
         return ResponseEntity.ok("Product updated");
     }
 
@@ -97,11 +95,8 @@ public class AdminPanelController {
 
     @Operation(summary = "Редактировать компанию")
     @PutMapping("/edit-company")
-    public ResponseEntity<String> editCompany(
-            @RequestBody CreateCompanyDescription description,
-            @RequestParam(required = false) Integer photoId
-    ) {
-        adminService.editCompany(description, photoId);
+    public ResponseEntity<String> editCompany(@RequestBody CreateCompanyDescription description) {
+        adminService.editCompany(description);
         return ResponseEntity.ok("Company updated");
     }
 
@@ -110,11 +105,9 @@ public class AdminPanelController {
     public ResponseEntity<String> editPromotion(
             @Parameter(description = "ID акции")
             @PathVariable Integer promotion_id,
-            @RequestBody EditPromotion editPromotion,
-            @Parameter(description = "Новые фото", required = false)
-            @RequestParam(required = false) List<Integer> photoIds
+            @RequestBody EditPromotion editPromotion
     ) {
-        adminService.editPromotion(promotion_id, editPromotion, photoIds);
+        adminService.editPromotion(promotion_id, editPromotion);
         return new ResponseEntity<>("Promotion edit success!", HttpStatus.OK);
     }
 
@@ -130,7 +123,9 @@ public class AdminPanelController {
     }
     @Operation(summary = "Заменить файл фотографии по ID")
     @PutMapping(value = "/edit-photo/{photo_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> editPhoto(@PathVariable Integer photo_id, @RequestPart("photo") MultipartFile photo) {
+    public ResponseEntity<String> editPhoto(
+            @PathVariable Integer photo_id,
+            @RequestPart("photo") MultipartFile photo) {
         adminService.editPhoto(photo_id, photo);
         return ResponseEntity.ok("Photo updated");
     }

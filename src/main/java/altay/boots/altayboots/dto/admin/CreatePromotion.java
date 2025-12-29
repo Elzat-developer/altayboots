@@ -2,6 +2,8 @@ package altay.boots.altayboots.dto.admin;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.util.List;
+
 @Schema(description = "Данные для создания новой акции")
 public record CreatePromotion(
         @Schema(description = "Название акции", example = "Новогодняя скидка")
@@ -17,6 +19,8 @@ public record CreatePromotion(
         String startDate,
 
         @Schema(description = "Дата окончания акции", example = "2025-01-10")
-        String endDate
+        String endDate,
+        @Schema(description = "Список ID фотографий", example = "[12, 13, 15]")
+        List<Integer> photoIds
 ) {}
 

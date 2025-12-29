@@ -2,6 +2,8 @@
 package altay.boots.altayboots.dto.admin;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.util.List;
 import java.util.Set;
 
 @Schema(description = "Данные для редактирования продукта")
@@ -17,5 +19,7 @@ public record EditProduct(
         @Schema(description = "Старая цена", example = "37990")
         Integer oldPrice,
         @Schema(description = "Размеры", example = "[\"38\", \"39\", \"40\"]...")
-        Set<String> sizes
+        Set<String> sizes,
+        @Schema(description = "Список ID фотографий", example = "[12, 13, 15]")
+        List<Integer> photoIds
 ) {}

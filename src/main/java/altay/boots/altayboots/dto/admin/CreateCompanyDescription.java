@@ -26,6 +26,8 @@ public record CreateCompanyDescription(
         @Schema(description = "Начало работы в выходные", example = "10:00")
         String freeStart,
         @Schema(description = "Конец работы в выходные", example = "14:00")
-        String freeEnd
+        String freeEnd,
+        @Schema(description = "Id Photo компаний", example = "14")
+        Integer photoId
 ) {}
 
