@@ -20,6 +20,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Log4j2
@@ -558,13 +559,13 @@ public class AdminServiceImpl implements AdminService {
         if (promotion.getProduct() != null) {
             productId = promotion.getProduct().getId();
         }
-
         return new GetPromotion(
                 promotion.getId(),
                 promotion.getName(),
                 promotion.getDescription(),
-                promotion.getPhotos()
+                promotion.getPhotos() == null ? List.of() : promotion.getPhotos()
                         .stream()
+                        .filter(Objects::nonNull) // 👈 ФИЛЬТР: пропускаем null элементы в коллекции
                         .map(photo -> new GetPhotoDto(
                                 photo.getId(),
                                 photo.getPhotoURL()
