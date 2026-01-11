@@ -18,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -74,41 +73,10 @@ public class AdminServiceImpl implements AdminService {
     public GetProduct getProduct(int productId) {
         // 1. Поиск продукта (предполагаем, что findById возвращает Product или бросает исключение)
         Product product = productRepo.findById(productId);
-
         if (product == null) {
             throw new IllegalArgumentException("Продукт с ID " + productId + " не найден.");
         }
-
-        // 2. Безопасное извлечение ID каталога
-        Integer catalogId = null;
-
-        // ⚠️ ПРОВЕРКА НА NULL: Если product.getCatalog() не null, мы берем его ID.
-        if (product.getCatalog() != null) {
-            catalogId = product.getCatalog().getId();
-        }
-
-        // 3. Извлечение списка фото (здесь также лучше убедиться, что getPhotos() не null)
-        List<GetPhotoDto> photoList = product.getPhotos() != null ?
-                product.getPhotos()
-                        .stream()
-                        .map(photo -> new GetPhotoDto(
-                                photo.getId(),
-                                photo.getPhotoURL()
-                        ))
-                        .toList() :
-                Collections.emptyList(); // Используем Collections.emptyList() для безопасности
-
-        return new GetProduct(
-                product.getId(),
-                product.getName(),
-                product.getDescription(),
-                product.getText(),
-                product.getPrice(),
-                product.getOldPrice(),
-                photoList,
-                product.getSizes(),
-                catalogId
-        );
+        return toDtoProduct(product);
     }
 
     @Override
@@ -606,8 +574,9 @@ public class AdminServiceImpl implements AdminService {
                 product.getText(),
                 product.getPrice(),
                 product.getOldPrice(),
-                product.getPhotos()
+                product.getPhotos() == null ? List.of() : product.getPhotos()
                         .stream()
+                        .filter(Objects::nonNull) // 👈 ФИЛЬТР: пропускаем null элементы в коллекции
                         .map(photo -> new GetPhotoDto(
                                 photo.getId(),
                                 photo.getPhotoURL()
