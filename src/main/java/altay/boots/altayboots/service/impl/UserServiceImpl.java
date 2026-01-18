@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -153,10 +154,6 @@ public class UserServiceImpl implements UserService {
                 user.getIndexPost()
         );
     }
-    private ProductPhotoDTO toDtoPhoto(ProductPhoto photo) {
-        return new ProductPhotoDTO(photo.getPhotoURL());
-    }
-
     // Преобразование Продукта
     private DetailedOrderProductDTO toDtoDetailedProduct(Product product) {
         // *** КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: БЕЗОПАСНАЯ ОБРАБОТКА NULL ***
@@ -184,7 +181,14 @@ public class UserServiceImpl implements UserService {
                 product.getOldPrice(),
                 product.isActive(),
                 catalogName,
-                product.getPhotos().stream().map(this::toDtoPhoto).toList()
+                product.getPhotos() == null ? List.of() : product.getPhotos()
+                        .stream()
+                        .filter(Objects::nonNull) // 👈 ФИЛЬТР: пропускаем null элементы в коллекции
+                        .map(photo -> new ProductPhotoDTO(
+                                photo.getId(),
+                                photo.getPhotoURL()
+                        ))
+                        .toList()
         );
     }
 
@@ -368,8 +372,9 @@ public class UserServiceImpl implements UserService {
                 product.getId(),
                 product.getName(),
                 product.getPrice(),
-                product.getPhotos()
+                product.getPhotos() == null ? List.of() : product.getPhotos()
                         .stream()
+                        .filter(Objects::nonNull) // 👈 ФИЛЬТР: пропускаем null элементы в коллекции
                         .map(photo -> new GetPhotoDto(
                                 photo.getId(),
                                 photo.getPhotoURL()
