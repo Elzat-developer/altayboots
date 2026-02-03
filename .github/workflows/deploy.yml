@@ -30,25 +30,25 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
-
-      # 3. Деплой и перезапуск
+            
+            # 3. Деплой и перезапуск
       - name: Deploy to Server and Restart Service
         run: |
           # 3.1. Убеждаемся, что хост добавлен (важно для первого раза)
-          ssh-keyscan ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-          
+          # Используем секрет порта везде
+          ssh-keyscan -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+                          
           # 3.2. Передача JAR-файла на сервер
+          # В rsync порт указывается внутри кавычек через -p
           rsync -avz \
-            -e "ssh -o StrictHostKeyChecking=no" \
-            ./build/libs/altayboots-0.0.1-SNAPSHOT.jar \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/home/${{ secrets.SERVER_USER }}/project/build/libs/
-          
-          # 3.3. Удаленное выполнение команд: остановка, очистка, запуск
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          -e "ssh -p ${{ secrets.SERVER_PORT }} -o StrictHostKeyChecking=no" \
+          ./build/libs/altayboots-0.0.1-SNAPSHOT.jar \
+          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/home/${{ secrets.SERVER_USER }}/project/build/libs/
+                               
+          # 3.3. Удаленное выполнение команд
+          # Добавляем флаг -p 2222 для команды ssh
+          ssh -p ${{ secrets.SERVER_PORT }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
             echo 'Deploying and restarting service...'
-            # 🛑 Здесь должно быть имя вашей systemd-службы!
             sudo systemctl stop altayboots
-            # Очистка старых логов или других ресурсов (по желанию)
-            # Запуск новой версии
             sudo systemctl start altayboots
             echo 'Deployment complete.'"
