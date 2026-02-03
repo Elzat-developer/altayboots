@@ -30,6 +30,8 @@ public class Product implements PhotosOwner {
     private Set<String> sizes = new TreeSet<>();
     @Column(name = "active", nullable = false)
     private boolean active = true;
+    @Column(name = "youtube_url")
+    private String youtubeUrl;
     @ManyToOne
     @JoinColumn(name = "catalogs_id",referencedColumnName = "id")
     private Catalog catalog;

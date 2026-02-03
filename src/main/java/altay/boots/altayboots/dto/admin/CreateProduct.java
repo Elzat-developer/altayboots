@@ -26,6 +26,8 @@ public record CreateProduct(
         @Schema(description = "Список ID фотографий", example = "[12, 13, 15]")
         List<Integer> photoIds,
         @Schema(description = "ID каталога", example = "1")
-        int catalog_id
+        int catalog_id,
+        @Schema(description = "Ссылка от Ютуба", example = "https://www.youtube.com/watch?v=GeulXZP_kZ8")
+        String youtubeUrl
 ) {}
 

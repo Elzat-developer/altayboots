@@ -92,6 +92,7 @@ public class AdminServiceImpl implements AdminService {
         if (editProduct.photoIds() != null) {
             updateProductPhotos(product, editProduct.photoIds());
         }
+        if (editProduct.youtubeUrl() != null) product.setYoutubeUrl(editProduct.youtubeUrl());
 
         productRepo.save(product);
     }
@@ -201,7 +202,8 @@ public class AdminServiceImpl implements AdminService {
                 company.getJobStart(),
                 company.getJobEnd(),
                 company.getFreeStart(),
-                company.getFreeEnd()
+                company.getFreeEnd(),
+                company.getUserMainUrl()
         );
     }
 
@@ -344,6 +346,7 @@ public class AdminServiceImpl implements AdminService {
         if (dto.price() != null) product.setPrice(dto.price());
         if (dto.oldPrice() != null) product.setOldPrice(dto.oldPrice());
         if (dto.sizes() != null) product.setSizes(dto.sizes());
+        if (dto.youtubeUrl() != null) product.setYoutubeUrl(dto.youtubeUrl());
         product.setActive(true);
     }
     private void updatePromotionLinks(Promotion promotion, Integer catalogId, Integer productId) {
@@ -581,7 +584,8 @@ public class AdminServiceImpl implements AdminService {
                         ))
                         .toList(),
                 product.getSizes(),
-                catalogId
+                catalogId,
+                product.getYoutubeUrl()
         );
     }
 }

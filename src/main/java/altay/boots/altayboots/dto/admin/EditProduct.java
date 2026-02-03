@@ -21,5 +21,7 @@ public record EditProduct(
         @Schema(description = "Размеры", example = "[\"38\", \"39\", \"40\"]...")
         Set<String> sizes,
         @Schema(description = "Список ID фотографий", example = "[12, 13, 15]")
-        List<Integer> photoIds
+        List<Integer> photoIds,
+        @Schema(description = "Ссылка от Ютуба", example = "https://www.youtube.com/watch?v=GeulXZP_kZ8")
+        String youtubeUrl
 ) {}

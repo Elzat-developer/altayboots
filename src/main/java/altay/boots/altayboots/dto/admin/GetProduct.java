@@ -30,6 +30,7 @@ public record GetProduct(
         Set<String> sizes,
 
         @Schema(description = "ID каталога, к которому принадлежит продукт", example = "2")
-        Integer catalog_id
+        Integer catalog_id,
+        String youtube_url
 ) {}
 
