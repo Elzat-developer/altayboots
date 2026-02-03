@@ -248,6 +248,11 @@ public class AdminServiceImpl implements AdminService {
                     .orElseThrow(() -> new EntityNotFoundException("Photo ID not found"));
             company.setPhotoURL(photo.getPhotoURL());
         }
+        if (companyDescription.userMainPhotoId() != null){
+            ProductPhoto photo = productPhotoRepo.findById(companyDescription.userMainPhotoId())
+                    .orElseThrow(() -> new EntityNotFoundException("Photo ID not found"));
+            company.setUserMainUrl(photo.getPhotoURL());
+        }
 
         companyRepo.save(company);
     }

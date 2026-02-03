@@ -14,6 +14,8 @@ public class Company {
     private String text;
     @Column(name = "photo_url")
     private String photoURL;
+    @Column(name = "user_main_url")
+    private String userMainUrl;
     private String base;
     private String city;
     private String street;
