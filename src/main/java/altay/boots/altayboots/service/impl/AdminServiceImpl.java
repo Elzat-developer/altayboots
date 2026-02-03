@@ -13,10 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -33,9 +29,7 @@ public class AdminServiceImpl implements AdminService {
     private final FileProcessingService fileProcessingService;
     private final CartItemRepository cartItemRepository;
     private final ProductPhotoRepo productPhotoRepo;
-
-    // --- КОНСТАНТА ДЛЯ КОРНЕВОЙ ПАПКИ ЗАГРУЗКИ ---
-    private static final String UPLOAD_ROOT_PATH = "C:/uploads";
+    private static final String subDirectory = "all_media";
 
     @Override
     @Transactional
@@ -453,21 +447,21 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public void createPhotos(List<MultipartFile> photos) {
-        final String subDirectory = "all_media";
-        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
-        try { Files.createDirectories(uploadDir); } catch (IOException e) { throw new RuntimeException(e); }
+        if (photos == null || photos.isEmpty()) return;
 
-        if (photos != null) {
-            for (MultipartFile file : photos) {
-                if (!file.isEmpty()) {
-                    String url = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
+        List<ProductPhoto> photoEntities = photos.stream()
+                .filter(file -> !file.isEmpty())
+                .map(file -> {
+                    String url = fileProcessingService.processPhotoAndReturnURL(file, subDirectory);
                     ProductPhoto photo = new ProductPhoto();
                     photo.setPhotoURL(url);
-                    productPhotoRepo.save(photo);
-                }
-            }
-        }
+                    return photo;
+                })
+                .toList();
+
+        productPhotoRepo.saveAll(photoEntities);
     }
 
     @Override
@@ -487,11 +481,10 @@ public class AdminServiceImpl implements AdminService {
         fileProcessingService.deleteFileFromDisk(photo.getPhotoURL());
 
         // Загружаем новый
-        final String subDirectory = "all_media";
-        Path uploadDir = Paths.get(UPLOAD_ROOT_PATH, subDirectory);
-        String newUrl = fileProcessingService.processPhotoAndReturnURL(file, uploadDir, subDirectory);
-
+        // Загружаем новый и обновляем URL
+        String newUrl = fileProcessingService.processPhotoAndReturnURL(file, subDirectory);
         photo.setPhotoURL(newUrl);
+
         productPhotoRepo.save(photo);
     }
 
