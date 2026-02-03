@@ -45,7 +45,7 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
     implementation 'net.coobird:thumbnailator:0.4.21'
-    implementation 'org.sejda.imageio.webp-imageio:0.1.6'
+    implementation 'org.sejda.imageio:webp-imageio:0.1.6'
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
