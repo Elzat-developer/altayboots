@@ -30,6 +30,7 @@ public record CompanyDescription(
         String freeStart,
         @Schema(description = "Конец работы в выходные", example = "14:00")
         String freeEnd,
+        @Schema(description = "URL изображения польщователья", example = "https://site.kz/company/photo.png")
         String userMainUrl
 ) {}
 
