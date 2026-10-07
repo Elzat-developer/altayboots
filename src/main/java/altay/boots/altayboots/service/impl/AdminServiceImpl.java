@@ -2,20 +2,21 @@ package altay.boots.altayboots.service.impl;
 
 import altay.boots.altayboots.dto.admin.*;
 import altay.boots.altayboots.model.entity.*;
-import altay.boots.altayboots.query.PromotionFirstImageProjection;
 import altay.boots.altayboots.repository.*;
 import altay.boots.altayboots.service.AdminService;
-import altay.boots.altayboots.service.FileProcessingService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 @Service
 @Log4j2
@@ -26,14 +27,17 @@ public class AdminServiceImpl implements AdminService {
     private final CompanyRepo companyRepo;
     private final PromotionRepo promotionRepo;
     private final OrderRepo orderRepo;
-    private final FileProcessingService fileProcessingService;
     private final CartItemRepository cartItemRepository;
     private final ProductPhotoRepo productPhotoRepo;
-    private static final String subDirectory = "all_media";
-
+    @Value("${storage.base-path}")
+    private String basePath;
+    @Value("${storage.dirs.product}")
+    private String productDir;
+    @Value("${storage.dirs.promotion}")
+    private String promotionDir;
     @Override
     @Transactional
-    public void createProduct(CreateProduct createProduct) {
+    public void createProduct(CreateProduct createProduct,List<MultipartFile> photos) {
         Catalog catalog = catalogRepo.findById(createProduct.catalog_id());
 
         if (catalog == null) {
@@ -44,17 +48,112 @@ public class AdminServiceImpl implements AdminService {
         updateProductFields(product, createProduct);
         product.setCatalog(catalog);
 
-        // Инициализируем пустой список в продукте, если он еще не инициализирован
+        // --- ЛОГИКА СОХРАНЕНИЯ ФОТОГРАФИЙ ---
+        if (photos != null && !photos.isEmpty()) {
+            setPhotosProduct(photos, product);
+        }
+        productRepo.save(product);
+    }
+
+    private void setPhotosProduct(List<MultipartFile> photos, Product product) {
+        // 1. Базовая защита от пустых списков
+        if (photos == null || photos.isEmpty()) {
+            return;
+        }
+
+        // 2. Защита от NullPointerException, если Hibernate подсунул null вместо пустой коллекции
         if (product.getPhotos() == null) {
             product.setPhotos(new ArrayList<>());
         }
 
-        productRepo.save(product);
+        // 3. Перебираем файлы и сохраняем каждый
+        for (MultipartFile file : photos) {
+            if (file != null && !file.isEmpty()) {
+                // Передаем файл и название директории (productDir) в наш безопасный единый метод
+                String relativePath = processMultipartFile(file, productDir);
 
-        // --- ЛОГИКА СОХРАНЕНИЯ ФОТОГРАФИЙ ---
-        savePhotosProduct(createProduct.photoIds(), product);
+                ProductPhoto productImage = new ProductPhoto();
+                productImage.setPhotoURL(relativePath);
+                productImage.setProduct(product);
+
+                product.getPhotos().add(productImage);
+                log.info("✅ Добавлено фото к продукту: {}", relativePath);
+            }
+        }
     }
+    private void setPhotosPromotion(List<MultipartFile> photos, Promotion promotion) {
+        // 1. Базовая защита от пустых списков
+        if (photos == null || photos.isEmpty()) {
+            return;
+        }
 
+        // 2. Защита от NullPointerException, если Hibernate подсунул null вместо пустой коллекции
+        if (promotion.getPhotos() == null) {
+            promotion.setPhotos(new ArrayList<>());
+        }
+
+        // 3. Перебираем файлы и сохраняем каждый
+        for (MultipartFile file : photos) {
+            if (file != null && !file.isEmpty()) {
+                // Передаем файл и название директории (productDir) в наш безопасный единый метод
+                String relativePath = processMultipartFile(file, promotionDir);
+
+                ProductPhoto productImage = new ProductPhoto();
+                productImage.setPhotoURL(relativePath);
+                productImage.setPromotion(promotion);
+
+                promotion.getPhotos().add(productImage);
+                log.info("✅ Добавлено фото к продукту: {}", relativePath);
+            }
+        }
+    }
+    private String processMultipartFile(MultipartFile multipartFile, String targetDirName) {
+        // 1. Защита от null
+        String originalFilename = Optional.of(multipartFile.getOriginalFilename())
+                .orElse("unknown_file");
+
+        // 2. Защита от Path Traversal: берем только конечное имя файла
+        String safeOriginalName = Paths.get(originalFilename).getFileName().toString();
+
+        String baseName = UUID.randomUUID().toString();
+        String contentType = Optional.of(multipartFile.getContentType()).orElse("");
+
+        String extension = "";
+        if (safeOriginalName.contains(".")) {
+            extension = safeOriginalName.substring(safeOriginalName.lastIndexOf(".") + 1).toLowerCase();
+        }
+
+        Path uploadDir = Paths.get(basePath, targetDirName).toAbsolutePath().normalize();
+
+        try {
+            Files.createDirectories(uploadDir);
+
+            if (contentType.startsWith("image/")) {
+                String fileName = extension.isEmpty() ? baseName : baseName + "." + extension;
+                Path filePath = uploadDir.resolve(fileName);
+
+                if (extension.equals("webp") || extension.equals("svg")) {
+                    multipartFile.transferTo(filePath);
+                } else {
+                    net.coobird.thumbnailator.Thumbnails.of(multipartFile.getInputStream())
+                            .size(1600, 1600)
+                            .outputQuality(0.8)
+                            .outputFormat(extension.isEmpty() ? "jpg" : extension)
+                            .toFile(filePath.toFile());
+                }
+                return Paths.get(targetDirName, fileName).toString(); // Сохраняем в БД относительный путь!
+            } else {
+                // Для не-картинок используем очищенное имя
+                String fileName = baseName + "_" + safeOriginalName;
+                Path filePath = uploadDir.resolve(fileName);
+                multipartFile.transferTo(filePath);
+                return Paths.get(targetDirName, fileName).toString();
+            }
+        } catch (IOException e) {
+            log.error("❌ Ошибка при сохранении '{}': {}", safeOriginalName, e.getMessage());
+            throw new RuntimeException("Ошибка при обработке файла", e);
+        }
+    }
     @Override
     public List<GetProduct> getProducts() {
         List<Product> products = productRepo.findAll();
@@ -75,7 +174,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void editProduct(int product_id, EditProduct editProduct) {
+    public void editProduct(int product_id, EditProduct editProduct,List<MultipartFile> photos) {
         Product product = productRepo.findById(product_id);
         if (product == null) {
             throw new IllegalArgumentException("Продукт с ID " + product_id + " не найден.");
@@ -89,50 +188,22 @@ public class AdminServiceImpl implements AdminService {
         if (editProduct.oldPrice() != null) product.setOldPrice(editProduct.oldPrice());
         if (editProduct.sizes() != null) product.setSizes(editProduct.sizes());
         // 2. ОБНОВЛЕНИЕ ФОТО С СОХРАНЕНИЕМ ПОРЯДКА
-        if (editProduct.photoIds() != null) {
-            updateProductPhotos(product, editProduct.photoIds());
+        if (photos != null && !photos.isEmpty()){
+            // 1. Сначала удаляем старые файлы с диска
+            product.getPhotos().forEach(photo -> deleteFileFromDisk(photo.getPhotoURL()));
+
+            // 2. Очищаем список (orphanRemoval = true в сущности удалит их из БД)
+            product.getPhotos().clear();
+
+            // 3. Сохраняем новые сжатые фото
+            setPhotosProduct(photos,product);
         }
         if (editProduct.youtubeUrl() != null) product.setYoutubeUrl(editProduct.youtubeUrl());
 
         productRepo.save(product);
     }
 
-    private void updateProductPhotos(Product product, List<Integer> photoIds) {
-        // ШАГ 1: Полностью отвязываем старые фото (чтобы индексы в БД обнулились)
-        List<ProductPhoto> currentPhotos = productPhotoRepo.findAllByProduct(product);
-        for (ProductPhoto p : currentPhotos) {
-            p.setProduct(null);
-        }
-        productPhotoRepo.saveAll(currentPhotos);
 
-        // ШАГ 2: Очищаем список внутри Java-объекта
-        if (product.getPhotos() == null) {
-            product.setPhotos(new ArrayList<>());
-        } else {
-            product.getPhotos().clear();
-        }
-
-        // ШАГ 3: Привязываем новые фото строго по списку photoIds
-        for (Integer photoId : photoIds) {
-            productPhotoRepo.findById(photoId).ifPresent(photo -> {
-                photo.setProduct(product); // Устанавливаем связь
-                product.getPhotos().add(photo); // Добавляем в список (Hibernate сам проставит индекс в @OrderColumn)
-            });
-        }
-        // Сохранять photoRepo.saveAll(photos) не обязательно, так как стоит CascadeType.ALL
-    }
-    private void savePhotosProduct(List<Integer> photoIds, Product product) {
-        if (photoIds != null && !photoIds.isEmpty()) {
-            List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
-
-            for (ProductPhoto photo : photos) {
-                photo.setProduct(product); // Устанавливаем владельца (сторона Photo)
-                product.getPhotos().add(photo); // Добавляем в коллекцию (сторона Product)
-            }
-
-            productPhotoRepo.saveAll(photos);
-        }
-    }
 
     @Override
     @Transactional
@@ -143,7 +214,6 @@ public class AdminServiceImpl implements AdminService {
         product.setActive(false);
         productRepo.save(product);
     }
-
     @Override
     public void createCatalog(CreateCatalog createCatalog) {
         Catalog catalog = new Catalog();
@@ -261,7 +331,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void createPromotion(CreatePromotion createPromotion) {
+    public void createPromotion(CreatePromotion createPromotion,List<MultipartFile> urlPhoto) {
         Promotion promotion = new Promotion();
 
         if (createPromotion.name() != null) promotion.setName(createPromotion.name());
@@ -276,27 +346,12 @@ public class AdminServiceImpl implements AdminService {
 
         // Если акция по умолчанию не глобальная, установите false
          promotion.setGlobal(false);
-
-
-
+        // Привязываем фото
+        if (urlPhoto != null && !urlPhoto.isEmpty()) {
+            setPhotosPromotion(urlPhoto,promotion);
+        }
         // Сохранение акции для получения ID, необходимого для привязки фото
         promotionRepo.save(promotion);
-
-        // Привязываем фото
-        savePhotosPromotion(createPromotion.photoIds(), promotion);
-    }
-
-    private void savePhotosPromotion(List<Integer> photoIds, Promotion promotion) {
-        if (photoIds != null && !photoIds.isEmpty()) {
-            List<ProductPhoto> photos = productPhotoRepo.findAllById(photoIds);
-
-            for (ProductPhoto photo : photos) {
-                photo.setPromotion(promotion); // Устанавливаем владельца (сторона Photo)
-                promotion.getPhotos().add(photo); // Добавляем в коллекцию (сторона Product)
-            }
-
-            productPhotoRepo.saveAll(photos);
-        }
     }
 
     @Override
@@ -315,7 +370,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void editPromotion(int promotionId, EditPromotion editPromotion) {
+    public void editPromotion(int promotionId, EditPromotion editPromotion,List<MultipartFile> photos) {
         Promotion promotion = promotionRepo.findById(promotionId);
         if (promotion == null) {throw new IllegalArgumentException("Promotion с ID " + promotionId + " не найден.");}
         // --- 2. ОБНОВЛЕНИЕ ОСНОВНЫХ ПОЛЕЙ И ПРИВЯЗОК ---
@@ -335,10 +390,54 @@ public class AdminServiceImpl implements AdminService {
         updatePromotionLinks(promotion, editPromotion.catalogId(), editPromotion.productId());
 
         // Обновление фотографий
-        savePhotosPromotion(editPromotion.photoIds(), promotion);
+        if (photos != null && !photos.isEmpty()){
+            // 1. Сначала удаляем старые файлы с диска
+            promotion.getPhotos().forEach(photo -> deleteFileFromDisk(photo.getPhotoURL()));
+
+            // 2. Очищаем список (orphanRemoval = true в сущности удалит их из БД)
+            promotion.getPhotos().clear();
+
+            // 3. Сохраняем новые сжатые фото
+            setPhotosPromotion(photos,promotion);
+        }
 
         promotionRepo.save(promotion);
     }
+    /**
+     * Метод для массового удаления файлов (принимает List, Set и любую другую Collection)
+     */
+    private void deleteFilesFromDisk(Collection<String> relativePaths) {
+        if (relativePaths == null || relativePaths.isEmpty()) {
+            return;
+        }
+
+        // Проходимся по списку и вызываем метод удаления для каждого пути
+        relativePaths.forEach(this::deleteFileFromDisk);
+    }
+    private void deleteFileFromDisk(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return;
+        }
+
+        try {
+            // Строим полный путь и нормализуем его
+            Path fullPath = Paths.get(basePath, relativePath).toAbsolutePath().normalize();
+            Path baseDirPath = Paths.get(basePath).toAbsolutePath().normalize();
+
+            // Security Check: проверяем, что путь действительно внутри basePath
+            if (!fullPath.startsWith(baseDirPath)) {
+                log.warn("⚠️ Попытка Path Traversal при удалении! Путь: {}", relativePath);
+                return;
+            }
+
+            if (Files.deleteIfExists(fullPath)) {
+                log.info("🗑️ Файл успешно удален: {}", fullPath);
+            }
+        } catch (IOException e) {
+            log.error("❌ Ошибка при удалении файла {}: {}", relativePath, e.getMessage());
+        }
+    }
+
     private void updateProductFields(Product product, CreateProduct dto) {
         if (dto.name() != null) product.setName(dto.name());
         if (dto.description() != null) product.setDescription(dto.description());
@@ -351,17 +450,35 @@ public class AdminServiceImpl implements AdminService {
     }
     private void updatePromotionLinks(Promotion promotion, Integer catalogId, Integer productId) {
         if (catalogId != null) {
-            if (catalogId <= 0) promotion.setCatalog(null);
-            else promotion.setCatalog(catalogRepo.findById(catalogId).orElse(null));
+            promotion.setCatalog(catalogRepo.findById(catalogId).orElse(null));
         }
         if (productId != null) {
-            if (productId <= 0) promotion.setProduct(null);
-            else promotion.setProduct(productRepo.findById(productId).orElse(null));
+            promotion.setProduct(productRepo.findById(productId).orElse(null));
         }
     }
     @Override
+    @Transactional
     public void deletePromotion(Integer promotionId) {
-        promotionRepo.deleteById(promotionId);
+        Promotion promotion = promotionRepo.findById(promotionId)
+                .orElseThrow(() -> new IllegalArgumentException("Promotion Not Found with id: " + promotionId));
+
+        // 1. До удаления из БД собираем список относительных путей к файлам
+        List<String> filePathsToDelete = null;
+        if (promotion.getPhotos() != null && !promotion.getPhotos().isEmpty()) {
+            filePathsToDelete = promotion.getPhotos().stream()
+                    .map(ProductPhoto::getPhotoURL)
+                    .filter(Objects::nonNull)
+                    .filter(url -> !url.isBlank())
+                    .toList();
+        }
+
+        // 2. Удаляем акцию из базы данных (каскадно удалятся и записи ProductPhoto)
+        promotionRepo.delete(promotion);
+
+        // 3. Если удаление из базы прошло успешно — удаляем файлы с диска
+        if (filePathsToDelete != null && !filePathsToDelete.isEmpty()) {
+            deleteFilesFromDisk(filePathsToDelete);
+        }
     }
 
     @Override
@@ -439,70 +556,6 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void deleteOrder(Integer orderId) {
         orderRepo.deleteById(orderId);
-    }
-
-    @Override
-    public List<GetPromotionFirstImage> getPromotionFirstImage() {
-        // 1. Получаем список интерфейсов проекции
-        List<PromotionFirstImageProjection> projections = promotionRepo.findPromotionsWithFirstPhotoNative();
-
-        return projections.stream()
-                .map(p -> new GetPromotionFirstImage(
-                        p.getPromotionId(),
-                        p.getPromotionImages()
-                ))
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public void createPhotos(List<MultipartFile> photos) {
-        if (photos == null || photos.isEmpty()) return;
-
-        List<ProductPhoto> photoEntities = photos.stream()
-                .filter(file -> !file.isEmpty())
-                .map(file -> {
-                    String url = fileProcessingService.processPhotoAndReturnURL(file, subDirectory);
-                    ProductPhoto photo = new ProductPhoto();
-                    photo.setPhotoURL(url);
-                    return photo;
-                })
-                .toList();
-
-        productPhotoRepo.saveAll(photoEntities);
-    }
-
-    @Override
-    public List<GetPhotoDto> getAllPhotos() {
-        return productPhotoRepo.findAll().stream()
-                .map(p -> new GetPhotoDto(p.getId(), p.getPhotoURL()))
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public void editPhoto(Integer photoId, MultipartFile file) {
-        ProductPhoto photo = productPhotoRepo.findById(photoId)
-                .orElseThrow(() -> new EntityNotFoundException("Photo not found"));
-
-        // Удаляем старый файл
-        fileProcessingService.deleteFileFromDisk(photo.getPhotoURL());
-
-        // Загружаем новый
-        // Загружаем новый и обновляем URL
-        String newUrl = fileProcessingService.processPhotoAndReturnURL(file, subDirectory);
-        photo.setPhotoURL(newUrl);
-
-        productPhotoRepo.save(photo);
-    }
-
-    @Override
-    @Transactional
-    public void deletePhoto(Integer photoId) {
-        ProductPhoto photo = productPhotoRepo.findById(photoId)
-                .orElseThrow(() -> new EntityNotFoundException("Photo not found"));
-        fileProcessingService.deleteFileFromDisk(photo.getPhotoURL());
-        productPhotoRepo.delete(photo);
     }
 
     private GetAdminOrderSimple toDtoOrders(Order order) {

@@ -40,9 +40,12 @@ public class AdminPanelController {
     // --------------------- CREATE ------------------------
 
     @Operation(summary = "Создать продукта")
-    @PostMapping("/create-product")
-    public ResponseEntity<String> createProduct(@RequestBody CreateProduct createProduct) {
-        adminService.createProduct(createProduct);
+    @PostMapping(value = "/create-product",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> createProduct(
+            @RequestPart("product") CreateProduct createProduct,
+            @RequestPart(value = "photos", required = false) List<MultipartFile> photos
+    ) {
+        adminService.createProduct(createProduct,photos);
         return new ResponseEntity<>("Product successfully created!", HttpStatus.CREATED);
     }
 
@@ -56,29 +59,24 @@ public class AdminPanelController {
     }
 
     @Operation(summary = "Создать акцию")
-    @PostMapping("/create-promotion")
+    @PostMapping(value = "/create-promotion",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> createPromotion(
-            @RequestBody CreatePromotion createPromotion
+            @RequestPart(value = "photos", required = false) List<MultipartFile> urlPhoto,
+            @RequestPart("promotion") CreatePromotion createPromotion
     ) {
-        adminService.createPromotion(createPromotion);
+        adminService.createPromotion(createPromotion,urlPhoto);
         return new ResponseEntity<>("Promotion created!", HttpStatus.CREATED);
     }
-    @Operation(summary = "Загрузить фотографии (без привязки)")
-    @PostMapping(value = "/create-photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> createPhotos(@RequestPart("photos") List<MultipartFile> photos) {
-        adminService.createPhotos(photos);
-        return new ResponseEntity<>("Photos uploaded successfully", HttpStatus.CREATED);
-    }
-
     // --------------------- EDIT ------------------------
 
     @Operation(summary = "Редактировать продукт")
     @PutMapping("/edit-product/{product_id}")
     public ResponseEntity<String> editProduct(
             @PathVariable Integer product_id,
-            @RequestBody EditProduct editProduct
+            @RequestPart("product") EditProduct editProduct,
+            @RequestPart(value = "photos", required = false) List<MultipartFile> photos
     ) {
-        adminService.editProduct(product_id, editProduct);
+        adminService.editProduct(product_id, editProduct,photos);
         return ResponseEntity.ok("Product updated");
     }
 
@@ -105,9 +103,10 @@ public class AdminPanelController {
     public ResponseEntity<String> editPromotion(
             @Parameter(description = "ID акции")
             @PathVariable Integer promotion_id,
-            @RequestBody EditPromotion editPromotion
+            @RequestPart("promotion") EditPromotion editPromotion,
+            @RequestPart(value = "photos", required = false) List<MultipartFile> photos
     ) {
-        adminService.editPromotion(promotion_id, editPromotion);
+        adminService.editPromotion(promotion_id, editPromotion,photos);
         return new ResponseEntity<>("Promotion edit success!", HttpStatus.OK);
     }
 
@@ -120,14 +119,6 @@ public class AdminPanelController {
     ) {
         adminService.editOrder(order_id, editOrder);
         return new ResponseEntity<>("Order edit success!", HttpStatus.OK);
-    }
-    @Operation(summary = "Заменить файл фотографии по ID")
-    @PutMapping(value = "/edit-photo/{photo_id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> editPhoto(
-            @PathVariable Integer photo_id,
-            @RequestPart("photo") MultipartFile photo) {
-        adminService.editPhoto(photo_id, photo);
-        return ResponseEntity.ok("Photo updated");
     }
     // --------------------- DELETE ------------------------
 
@@ -169,12 +160,6 @@ public class AdminPanelController {
     ) {
         adminService.deleteOrder(order_id);
         return new ResponseEntity<>("Order delete success!", HttpStatus.OK);
-    }
-    @Operation(summary = "Удалить фотографию (совсем)")
-    @DeleteMapping("/delete-photo/{photo_id}")
-    public ResponseEntity<String> deletePhoto(@PathVariable Integer photo_id) {
-        adminService.deletePhoto(photo_id);
-        return ResponseEntity.ok("Photo deleted");
     }
 }
 

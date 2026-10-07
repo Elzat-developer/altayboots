@@ -26,7 +26,7 @@ public class User implements UserDetails {
     private String lastName;
     @Column(name = "password")
     private String password;
-    @Column(name = "phone")
+    @Column(name = "phone",unique = true)
     private String phone;
     @Enumerated(value = EnumType.STRING)
     private Authorities authorities;

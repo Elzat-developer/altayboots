@@ -1,6 +1,5 @@
 package altay.boots.altayboots.service.impl;
 
-import altay.boots.altayboots.service.FileProcessingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import net.coobird.thumbnailator.Thumbnails;

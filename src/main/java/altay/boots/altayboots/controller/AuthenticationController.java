@@ -127,14 +127,4 @@ public class AuthenticationController {
     ) {
         return ResponseEntity.ok(adminService.getPromotion(promotion_id));
     }
-    @Operation(summary = "Получить список акций, но его только первое фото и id")
-    @GetMapping("/promotions-first-image")
-    public ResponseEntity<List<GetPromotionFirstImage>> getPromotionFirstImage(){
-        return ResponseEntity.ok(adminService.getPromotionFirstImage());
-    }
-    @Operation(summary = "Получить все загруженные фотографии")
-    @GetMapping("/photos")
-    public ResponseEntity<List<GetPhotoDto>> getAllPhotos() {
-        return ResponseEntity.ok(adminService.getAllPhotos());
-    }
 }
